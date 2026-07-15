@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>馬鞍山礦車大冒險 — 遊戲計劃書</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --card: #141b2d;
+    --accent: #d4a843;
+    --accent2: #8b6f3a;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --red: #f87171;
+    --blue: #38bdf8;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --ore: #5c4033;
+    --mine: #2d1f14;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 20px;
+    line-height: 1.7;
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 30px 20px; }
+
+  .hero {
+    background: linear-gradient(135deg, #1a0f0a 0%, #0a0e1a 50%, #1a1208 100%);
+    border-bottom: 4px solid var(--accent);
+    padding: 50px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '⛏️🚂💎';
+    position: absolute;
+    font-size: 8rem;
+    opacity: 0.05;
+    top: -20px;
+    right: -30px;
+    transform: rotate(15deg);
+  }
+  .hero h1 { font-size: 2.6rem; color: var(--accent); margin-bottom: 8px; }
+  .hero .subtitle { font-size: 1.2rem; color: var(--accent2); }
+  .hero .meta { margin-top: 12px; font-size: 0.95rem; color: #64748b; }
+
+  .section {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 35px 30px;
+    margin: 30px 0;
+    border: 1px solid #1e2a3a;
+  }
+  .section h2 {
+    font-size: 1.8rem;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1e2a3a;
+  }
+  .section h3 {
+    font-size: 1.3rem;
+    color: var(--blue);
+    margin: 25px 0 12px 0;
+  }
+  .section h4 { font-size: 1.1rem; color: var(--accent2); margin: 18px 0 8px; }
+  .section p { margin: 10px 0; color: var(--text2); }
+  .section ul, .section ol { margin: 10px 0 10px 25px; }
+  .section li { margin: 6px 0; color: var(--text2); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.95rem;
+  }
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #1e2a3a;
+  }
+  th { background: #1a2332; color: var(--accent); font-weight: 600; }
+  td { color: var(--text2); }
+  tr:hover td { background: #1a2332; }
+
+  .scene-card {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid #2a2a4a;
+    border-radius: 14px;
+    padding: 25px;
+    margin: 20px 0;
+    border-left: 4px solid var(--accent);
+  }
+  .scene-card h3 { color: var(--accent); margin-top: 0; }
+  .scene-card .scene-meta {
+    display: flex; gap: 15px; flex-wrap: wrap; margin: 10px 0;
+  }
+  .scene-meta .tag {
+    background: #1e2a3a; padding: 4px 12px; border-radius: 6px;
+    font-size: 0.85rem; color: var(--text2);
+  }
+  .tag-danger { border-left: 3px solid var(--red); }
+  .tag-action { border-left: 3px solid var(--orange); }
+  .tag-historical { border-left: 3px solid var(--blue); }
+
+  .boss-card {
+    background: linear-gradient(135deg, #2a1a1a, #1a0a0a);
+    border: 2px solid var(--red);
+    border-radius: 14px;
+    padding: 25px;
+    margin: 20px 0;
+  }
+  .boss-card h3 { color: var(--red); }
+  .boss-card .boss-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+    gap: 10px; margin: 15px 0;
+  }
+  .boss-stats .stat {
+    background: #1e1a1a; padding: 10px; border-radius: 8px; text-align: center;
+  }
+  .boss-stats .stat .val { font-size: 1.4rem; font-weight: 700; color: var(--red); }
+  .boss-stats .stat .lbl { font-size: 0.8rem; color: var(--text2); }
+
+  .highlight {
+    background: linear-gradient(135deg, #1a2a1a, #0a1a0a);
+    border-left: 4px solid var(--green);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+
+  .roadmap { position: relative; padding-left: 30px; margin: 20px 0; }
+  .roadmap::before {
+    content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+    width: 3px; background: #1e2a3a;
+  }
+  .roadmap-item {
+    position: relative; padding: 12px 0 12px 20px;
+  }
+  .roadmap-item::before {
+    content: ''; position: absolute; left: -26px; top: 18px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); border: 3px solid var(--bg);
+  }
+  .roadmap-item .title { font-weight: 600; color: var(--accent); }
+  .roadmap-item .desc { font-size: 0.9rem; color: var(--text2); }
+
+  .footer {
+    text-align: center; padding: 40px 20px;
+    color: #475569; font-size: 0.9rem; border-top: 1px solid #1e293b;
+  }
+
+  @media (max-width: 600px) {
+    body { font-size: 18px; }
+    .hero h1 { font-size: 2rem; }
+    .section { padding: 25px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>⛏️ 馬鞍山礦車大冒險</h1>
+  <div class="subtitle">Ma On Shan Mine Cart Adventure — 手機遊戲計劃書</div>
+  <div class="meta">由 無虛 (mvmv) 製作 · 2026-07-15</div>
+</div>
+
+<div class="container">
+
+<!-- ===== SECTION 1: GAME OVERVIEW ===== -->
+<div class="section">
+  <h2>🎯 遊戲主題</h2>
+  <p>《馬鞍山礦車大冒險》係一款以 <strong>1950-70年代馬鞍山鐵礦場</strong> 為背景嘅手機冒險遊戲。玩家控制一架礦車，穿越礦洞、礦村、碼頭，體驗當年礦工嘅真實工作環境。</p>
+  
+  <div class="highlight">
+    <strong>🏆 核心目標：</strong><br>
+    透過遊戲令玩家認識香港唯一大型鐵礦場嘅歷史，以真實場景還原吸引本地居民同歷史愛好者。<br><br>
+    <strong>🎮 遊戲類型：</strong> 橫向卷軸冒險 + 避障 + 收集<br>
+    <strong>📱 平台：</strong> HTML5 手機網頁遊戲（browser開到，唔使安裝）<br>
+    <strong>👥 目標玩家：</strong> 馬鞍山居民、香港歷史愛好者、中學生、親子<br>
+    <strong>🎨 美術風格：</strong> 像素風（pixel art）或手繪風格，還原70年代懷舊感
+  </div>
+</div>
+
+<!-- ===== SECTION 2: MAIN STORYLINE ===== -->
+<div class="section">
+  <h2>📖 主線故事</h2>
+  <p>你係一個 1970 年代嘅年輕礦工，第一天返工就要由山頂嘅 <strong>240ML 礦洞</strong> 出發，穿過地下坑道網絡，去到 <strong>110ML 運輸坑道</strong> 坐上電動火車，將鐵礦石運送到 <strong>碼頭</strong> 出口去日本。</p>
+  <p>沿途你會經過礦場各個角落，見到礦工工作嘅場景，仲要避開各種障礙。完成礦場任務後，你要由山頂穿越 <strong>礦村四區</strong>，最後安全抵達 <strong>耀安邨</strong>。</p>
+
+  <table>
+    <tr><th>章節</th><th>場景</th><th>玩法</th></tr>
+    <tr><td>第一章</td><td>240ML 礦洞 → 地下坑道</td><td>向下滑行避障，避開塌方石塊</td></tr>
+    <tr><td>第二章</td><td>坑道內→豎井→110ML</td><td>控制礦車速度，跳躍過豎井</td></tr>
+    <tr><td>第三章</td><td>110ML 電動火車</td><td>沿路軌衝刺，避開障礙物</td></tr>
+    <tr><td>第四章</td><td>選礦廠 → 碼頭區</td><td>搬運礦石，裝船上貨</td></tr>
+    <tr><td>第五章</td><td>礦村四區探索</td><td>收集文物，解鎖歷史資料</td></tr>
+    <tr><td>第六章 BOSS</td><td>山頂→耀安邨</td><td>終極避險——洪水逃亡</td></tr>
+  </table>
+</div>
+
+<!-- ===== SECTION 3: CHAPTER 1 - 240ML TO UNDERGROUND ===== -->
+<div class="scene-card">
+  <h3>⛰️ 第一章：240ML 礦洞入口</h3>
+  <div class="scene-meta">
+    <span class="tag tag-historical">🏛️ 歷史場景</span>
+    <span class="tag tag-action">🎮 向下滑行</span>
+    <span class="tag">難度：⭐⭐</span>
+  </div>
+  
+  <h4>🏗️ 場景描述（忠於歷史）</h4>
+  <p>你企喺 <strong>240ML 礦洞口</strong> 前面。呢個係一個方形混凝土入口，上面寫住「240M.L.」，入口上方有兩個大圓洞——呢啲係當年嘅抽氣扇位置。洞口嘅鐵門已經打開，裏面黑漆漆一片，只聽到水滴聲同遠處嘅鑿石聲。</p>
+  <p>空氣中瀰漫著火藥味同泥土味，你深呼吸一口，揸實礦車嘅控制桿，出發！</p>
+
+  <h4>🎮 玩法</h4>
+  <ul>
+    <li><strong>礦車控制：</strong> 手機左右傾斜/㩒屏幕左右控制礦車喺路軌上嘅平衡</li>
+    <li><strong>避開障礙：</strong> 塌落嘅岩石、遺留嘅工具、地下積水</li>
+    <li><strong>速度控制：</strong> 當年礦車用木棍剎車，遊戲中靠㩒屏幕控制速度（太快會出軌！）</li>
+    <li><strong>收集：</strong> 鐵礦石碎片（加分用）、礦工遺留嘅物品</li>
+  </ul>
+
+  <h4>👀 沿途見到嘅礦工工作場景</h4>
+  <ul>
+    <li>👷 鑽井隊用風鑽喺岩壁上鑽孔（共15人）</li>
+    <li>💥 爆破隊安裝硝酸甘油炸藥（共15人）</li>
+    <li>🔨 揀礦工用小鎚輕敲礦石，以顏色（灰黑色）、重量（較重）、質感（易碎）分辨鐵含量</li>
+    <li>🪨 礦工用V型礦斗卡車沿鐵軌運送礦石，用木棍剎車控制速度</li>
+    <li>🐦 角落嘅金絲雀籠——礦工用金絲雀檢測有毒氣體</li>
+  </ul>
+
+  <h4>✅ 過關要求</h4>
+  <p>成功從240ML滑行到坑道底部，收集至少10塊鐵礦石，避免撞到障礙物超過3次</p>
+</div>
+
+<!-- ===== CHAPTER 2 ===== -->
+<div class="scene-card">
+  <h3>🕳️ 第二章：豎井飛躍 — 240ML→110ML</h3>
+  <div class="scene-meta">
+    <span class="tag tag-historical">🏛️ 歷史場景</span>
+    <span class="tag tag-action">🎮 跳躍 + 節奏</span>
+    <span class="tag">難度：⭐⭐⭐</span>
+  </div>
+
+  <h4>🏗️ 場景描述</h4>
+  <p>你進入咗礦洞嘅核心地帶——呢度係棋盤式坑道網絡。頭頂有燈泡發出微弱黃光，四周係坑道支柱。你會經過 <strong>192ML</strong>、<strong>144ML</strong> 水平層，見到礦石從上層經 <strong>豎井（垂直通道）</strong> 傾倒落嚟，以風壓開關閘控制，似一個巨型存礦倉。</p>
+
+  <h4>🎮 玩法</h4>
+  <ul>
+    <li><strong>跳躍豎井：</strong> 要喺啱嘅時機跳過豎井，唔係就會跌落去</li>
+    <li><strong>礦石雨：</strong> 上層傾倒礦石落嚟時要避開（節奏遊戲元素）</li>
+    <li><strong>風壓閘：</strong> 要喺閘門關閉前衝過去</li>
+    <li><strong>斜道纜車：</strong> 部分路段要跳上斜道嘅纜車，搭一段順風車</li>
+  </ul>
+
+  <h4>✅ 過關要求</h4>
+  <p>成功到達110ML水平層，坐上電動火車</p>
+</div>
+
+<!-- ===== CHAPTER 3 ===== -->
+<div class="scene-card">
+  <h3>🚂 第三章：110ML 運輸坑道</h3>
+  <div class="scene-meta">
+    <span class="tag tag-historical">🏛️ 歷史場景</span>
+    <span class="tag tag-action">🎮 橫向衝刺</span>
+    <span class="tag">難度：⭐⭐⭐</span>
+  </div>
+
+  <h4>🏗️ 場景描述</h4>
+  <p>你終於到達 <strong>110ML 運輸坑道</strong>。呢度係海拔110米嘅主運輸層，坑道長約 <strong>2,200米</strong>，係礦場嘅心臟地帶。一架天線式電動牽引機車喺路軌上等你——每次可拖帶 <strong>10幾架載礦卡車</strong>，運載量達數十噸！</p>
+  <p>你坐上機車，拉動控制桿，列車沿路軌向洞口方向駛去。沿途經過支撐柱、通風管道、仲有豎井嘅底部出口。</p>
+  <p>洞口係半圓拱形，上面寫住「110M.L.」。出口設有 <strong>自動磅重儀</strong> 記錄產量。</p>
+
+  <h4>🎮 玩法</h4>
+  <ul>
+    <li><strong>電動火車駕駛：</strong> 控制火車速度，避開路軌上嘅碎石</li>
+    <li><strong>換軌：</strong> 遇到分岔路要揀啱路線（有死路）</li>
+    <li><strong>通風扇：</strong> 經過大型通風扇時要低頭避開（快速㩒屏幕蹲下）</li>
+    <li><strong>收集礦石：</strong> 卡車上嘅鐵礦石會跌出嚟，要撿返</li>
+  </ul>
+
+  <h4>✅ 過關要求</h4>
+  <p>成功駛出110ML洞口，磅重儀記錄到至少20噸礦石</p>
+</div>
+
+<!-- ===== CHAPTER 4 ===== -->
+<div class="scene-card">
+  <h3>🏭 第四章：選礦廠 → 碼頭區</h3>
+  <div class="scene-meta">
+    <span class="tag tag-historical">🏛️ 歷史場景</span>
+    <span class="tag tag-action">🎮 搬運 + 限時</span>
+    <span class="tag">難度：⭐⭐</span>
+  </div>
+
+  <h4>🏗️ 場景描述</h4>
+  <p>礦石從110ML運出後，送到旁邊嘅 <strong>選礦廠</strong>（建於1954年，耗資十四萬元）。呢個廠房24小時運作，機器聲震耳欲聾！</p>
+  <p>選礦流程一路展開：</p>
+  <ol>
+    <li><strong>碎礦機</strong> — 三組機械逐步將礦石打碎至直徑5厘米</li>
+    <li><strong>振動篩</strong> — 分離粗粒</li>
+    <li><strong>乾選機（電磁）</strong> — 挑選高鐵礦粒</li>
+    <li><strong>球磨機 + 棒磨機</strong> — 磨成幼砂（不斷加水）</li>
+    <li><strong>濕選機（電磁）</strong> — 吸起鐵砂，純度由37%提升至<strong>57-59%</strong></li>
+    <li><strong>脫磁 → 沉澱 → 真空脫水</strong> — 變成精礦粉</li>
+    <li><strong>運輸帶</strong> — 送至精礦堆積場 → 再送去碼頭</li>
+  </ol>
+
+  <h4>🎮 玩法</h4>
+  <ul>
+    <li><strong>限時運輸：</strong> 喺指定時間內將礦石搬運到唔同嘅機器中</li>
+    <li><strong>小遊戲：</strong> 操作磁鐵吸起鐵砂，避開石頭（似夾公仔機）</li>
+    <li><strong>碼頭裝船：</strong> 用運輸帶將精礦送上躉船，再吊上貨輪「大寶山號」或「大寶石號」</li>
+    <li><strong>避車：</strong> 當年兒童返學要避開運礦車，遊戲中要避開來回嘅夾斗貨車</li>
+  </ul>
+
+  <h4>✅ 過關要求</h4>
+  <p>成功將10噸精礦裝上貨輪，完成今日運送任務</p>
+</div>
+
+<!-- ===== CHAPTER 5 ===== -->
+<div class="scene-card">
+  <h3>🏘️ 第五章：礦村四區探索</h3>
+  <div class="scene-meta">
+    <span class="tag tag-historical">🏛️ 歷史場景</span>
+    <span class="tag tag-action">🎮 收集 + 解謎</span>
+    <span class="tag">難度：⭐</span>
+  </div>
+
+  <h4>🏗️ 場景描述</h4>
+  <p>完成礦場工作後，你決定探索呢個住了接近<strong>一萬人</strong>嘅礦村。礦村分為四個區域，每區住著唔同嘅社群：</p>
+
+  <h4>📍 山頂區（北方人聚居）</h4>
+  <p>呢度係礦村嘅經濟核心。有 <strong>信義會恩光堂</strong>（1952年建成，香港信義會第一所自建禮拜堂，正面山牆上有小鐘樓，歌德式尖拱窗，聖所後牆有「耶穌帶領羊群」壁畫）；<strong>天主堂聖若瑟堂</strong>（1952年，現代風格+歌德式尖拱門窗，混凝土結構，金字屋頂）；仲有 <strong>聖若瑟小學校</strong>、<strong>修道院</strong>、<strong>神父樓</strong>（入口有聖母抱聖嬰浮雕）。</p>
+
+  <h4>📍 馬鞍橋區（客家人聚居）</h4>
+  <p>位於馬鞍山郊野公園燒烤場附近。呢度有 <strong>馬鞍橋</strong> 遺跡，周圍係矮小石屋同菜園。</p>
+
+  <h4>📍 上下半山/潮洲村區（潮州人聚居）</h4>
+  <p>沿山路往下走，左邊路口進入就係潮州村。潮州工隊（如張松秋工隊）就係呢一帶。</p>
+
+  <h4>📍 碼頭區（廣東人聚居）</h4>
+  <p>即係今日嘅 <strong>恒安邨、耀安邨</strong> 位置。當年呢度有民居、車房、貨倉、木廠、仲有市集。礦石就係喺呢度用躉船同貨輪運去日本。</p>
+
+  <h4>🎮 玩法</h4>
+  <ul>
+    <li><strong>探索收集：</strong> 喺四區走動，收集歷史文物（舊照片、礦工工具、教會文件）</li>
+    <li><strong>互動解謎：</strong> 教會場景有謎題要解（例如排列聖經經文、敲鐘順序）</li>
+    <li><strong>人物對話：</strong> 遇到村民可以對話，了解礦村生活故事</li>
+    <li><strong>小遊戲：</strong> 幫村民送貨、修理礦工屋企</li>
+    <li><strong>📸 拍照收集：</strong> 用手機鏡頭（遊戲內）影低歷史建築，解鎖圖鑑</li>
+  </ul>
+
+  <p><strong>可收集文物（參考真實歷史）：</strong> 信義學校舊課本、礦工頭燈、硝酸甘油炸藥包裝、大公洋行文件、日本工程師測量圖、礦車木剎車棍。</p>
+
+  <h4>✅ 過關要求</h4>
+  <p>收集至少8件文物，訪問3個村民，解鎖教堂隱藏房間</p>
+</div>
+
+<!-- ===== CHAPTER 6 - BOSS ===== -->
+<div class="boss-card">
+  <h3>🌊 第六章 BOSS戰：耀安邨洪水逃亡</h3>
+  
+  <p>完成礦村探索後，你要由山頂安全到達山腳嘅 <strong>耀安邨</strong>。但呢個時候—— <strong>每年雨季嘅洪水突然爆發！</strong> 💀</p>
+
+  <div class="boss-stats">
+    <div class="stat">
+      <div class="val">🌧️ BOSS</div>
+      <div class="lbl">洪水猛獸</div>
+    </div>
+    <div class="stat">
+      <div class="val">💨 速度</div>
+      <div class="lbl">越來越快</div>
+    </div>
+    <div class="stat">
+      <div class="val">⏱️ 限時</div>
+      <div class="lbl">90秒逃生</div>
+    </div>
+    <div class="stat">
+      <div class="val">🚧 障礙</div>
+      <div class="lbl">6種不斷增加</div>
+    </div>
+  </div>
+
+  <h4>🎮 BOSS戰玩法</h4>
+  <ul>
+    <li><strong>場景：</strong> 由鞍山探索館（山頂）一路向下跑到耀安邨停車場</li>
+    <li><strong>洪水追趕：</strong> 畫面底部洪水不斷上升，你要一路向上跳</li>
+    <li><strong>障礙物：</strong>
+      <ul>
+        <li>🌊 <strong>海邊吹上嚟嘅鹹水風</strong> — 強風會吹斜你，要𨅝低</li>
+        <li>🚗 <strong>大佬亂cut線</strong> — 的士突然從側邊衝出</li>
+        <li>🚲 <strong>耀安邨單車仔</strong> — 學生踩單車橫衝直撞</li>
+        <li>🅿️ <strong>停車場洪水</strong> — 積水區要跳過，唔係會慢落嚟</li>
+        <li>🪨 <strong>山泥傾瀉</strong> — 礦場遺址嘅碎石滾落</li>
+        <li>🚧 <strong>路陷</strong> — 當年礦洞可能導致地面下陷</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h4>🎮 特殊機制</h4>
+  <ul>
+    <li><strong>體力值：</strong> 跑得太快會消耗體力，要收集路邊嘅「腐乳饅頭」補充（當年礦工嘅食物）</li>
+    <li><strong>分數加成：</strong> 路上有你之前收集嘅文物，撿到可以加分</li>
+    <li><strong>水位警示：</strong> 畫面邊緣會變色——由黃→橙→紅，代表洪水迫近</li>
+  </ul>
+
+  <h4>🏆 通關條件</h4>
+  <p>成功逃到耀安邨安全位置，洪水淹浸前到達終點</p>
+
+  <h4>🌟 通關獎勵</h4>
+  <p>解鎖「鞍山探索館」導賞模式、歷史圖鑑全集、成就「礦工之王」👑</p>
+</div>
+
+<!-- ===== SECTION: OBSTACLES ===== -->
+<div class="section">
+  <h2>🚧 障礙物系統</h2>
+  <p>遊戲從頭到尾嘅障礙物，忠於馬鞍山真實環境：</p>
+
+  <table>
+    <tr><th>障礙物</th><th>出現場景</th><th>玩法</th></tr>
+    <tr><td>🪨 塌方岩石</td><td>礦洞內</td><td>左右閃避</td></tr>
+    <tr><td>💥 爆破區</td><td>240ML坑道</td><td>見到紅色警示要後退</td></tr>
+    <tr><td>🕳️ 豎井缺口</td><td>坑道之間</td><td>跳躍（時機要準）</td></tr>
+    <tr><td>💨 通風扇葉</td><td>110ML坑道</td><td>蹲下避開</td></tr>
+    <tr><td>🌊 鹹水風</td><td>海邊路段+BOSS戰</td><td>㩒低重心</td></tr>
+    <tr><td>🚗 亂cut線的士</td><td>礦村道路+BOSS戰</td><td>即時閃避</td></tr>
+    <tr><td>🚲 耀安邨單車仔</td><td>耀安邨附近</td><td>跳起/急停</td></tr>
+    <tr><td>🌊 洪水</td><td>BOSS戰</td><td>一路向上逃</td></tr>
+  </table>
+</div>
+
+<!-- ===== SECTION: COLLECTIBLES ===== -->
+<div class="section">
+  <h2>💎 收集系統</h2>
+
+  <table>
+    <tr><th>收集品</th><th>效果</th><th>出現位置</th></tr>
+    <tr><td>🪨 鐵礦石</td><td>加分 + 解鎖礦石圖鑑</td><td>礦洞各處</td></tr>
+    <tr><td>🥖 腐乳饅頭</td><td>回復體力</td><td>礦村各區</td></tr>
+    <tr><td>📜 歷史文物</td><td>解鎖歷史背景故事</td><td>四區隱藏位置</td></tr>
+    <tr><td>📸 建築照片</td><td>解鎖建築圖鑑 + 描述</td><td>教會、學校、碼頭</td></tr>
+    <tr><td>⛏️ 礦工工具</td><td>解鎖角色能力（如燈光範圍增大）</td><td>礦洞深處</td></tr>
+    <tr><td>🐦 金絲雀羽毛</td><td>隱藏收集品（全收集有彩蛋）</td><td>礦洞隱藏角落</td></tr>
+  </table>
+
+  <h4>📚 歷史圖鑑（收集解鎖內容）</h4>
+  <ul>
+    <li>馬鞍山鐵礦場發展史（1905-1976）</li>
+    <li>240ML vs 110ML 礦洞建築特色</li>
+    <li>選礦廠七步流程</li>
+    <li>礦工生活：工隊制、食物、交通</li>
+    <li>教會歷史：信義會恩光堂 vs 天主堂聖若瑟堂</li>
+    <li>礦村四區社群文化</li>
+    <li>碼頭運輸：大寶山號、大寶石號貨輪</li>
+    <li>礦場結業原因</li>
+  </ul>
+</div>
+
+<!-- ===== SECTION: MAP ===== -->
+<div class="section">
+  <h2>🗺️ 遊戲地圖全覽</h2>
+
+  <p>由山頂到山腳嘅完整路線：</p>
+
+  <div style="background:#0a0e1a;border:1px solid #1e2a3a;border-radius:12px;padding:30px;margin:20px 0;text-align:center;font-size:1rem;line-height:2.2;">
+    <span style="color:var(--accent);">⛰️ 240ML礦洞入口（海拔240米）</span><br>
+    ↓ 礦車向下滑行<br>
+    <span style="color:var(--orange);">🕳️ 坑道網絡（192ML → 144ML）</span><br>
+    ↓ 跳躍豎井<br>
+    <span style="color:var(--blue);">🚂 110ML運輸坑道（海拔110米）</span><br>
+    ↓ 電動火車2,200米<br>
+    <span style="color:var(--accent);">🏭 選礦廠（1954）</span><br>
+    ↓ 運輸帶<br>
+    <span style="color:var(--accent2);">🚢 碼頭區（今日恒安邨/耀安邨）</span><br>
+    ↓<br>
+    <span style="color:var(--accent);">⛪ 山頂區教會（恩光堂+聖若瑟堂）</span><br>
+    ↓<br>
+    <span style="color:var(--accent2);">🏘️ 馬鞍橋區 → 潮洲村區</span><br>
+    ↓<br>
+    <span style="color:var(--green);">🏠 耀安邨 🏁</span><br>
+    <span style="color:var(--red);">🌊 BOSS戰：洪水逃亡</span>
+  </div>
+</div>
+
+<!-- ===== SECTION: TECH ===== -->
+<div class="section">
+  <h2>🛠️ 技術方案</h2>
+
+  <table>
+    <tr><th>項目</th><th>方案</th></tr>
+    <tr><td>遊戲引擎</td><td>Phaser.js / Canvas API（免費HTML5遊戲引擎）</td></tr>
+    <tr><td>平台</td><td>手機browser（Chrome/Safari），唔使安裝</td></tr>
+    <tr><td>控制方式</td><td>觸控（左右㩒/傾斜陀螺儀）</td></tr>
+    <tr><td>美術風格</td><td>像素風 pixel art（懷舊感+細檔案）</td></tr>
+    <tr><td>音效</td><td>免費音效庫（礦車聲、爆破聲、水流聲）</td></tr>
+    <tr><td>儲存</td><td>瀏覽器 LocalStorage（保存進度）</td></tr>
+    <tr><td>上架</td><td>GitHub Pages 免費 hosting，link分享</td></tr>
+  </table>
+
+  <div class="highlight">
+    <strong>📝 開發步驟：</strong><br>
+    1️⃣ 設計第一關 prototype（240ML滑行）→ 2️⃣ 測試手感 → 3️⃣ 逐關添加 → 4️⃣ 整合BOSS戰 → 5️⃣ 加入收集系統 → 6️⃣ 測試+上線
+  </div>
+</div>
+
+<!-- ===== SECTION: ROADMAP ===== -->
+<div class="section">
+  <h2>🗺️ 開發路線圖</h2>
+
+  <div class="roadmap">
+    <div class="roadmap-item">
+      <div class="title">📋 Phase 1：Prototype</div>
+      <div class="desc">第一章 240ML礦洞滑行 — 測試核心玩法、控制方式、物理引擎</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="title">🎨 Phase 2：美術+音效</div>
+      <div class="desc">Pixel art場景繪製、礦車角色設計、音效製作</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="title">🏗️ Phase 3：完整關卡</div>
+      <div class="desc">第二章至第五章全部場景＋玩法實裝</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="title">🌊 Phase 4：BOSS戰</div>
+      <div class="desc">耀安邨洪水逃亡最終關卡</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="title">📚 Phase 5：收集+圖鑑</div>
+      <div class="desc">文物系統、歷史圖鑑、成就系統</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="title">🚀 Phase 6：上線</div>
+      <div class="desc">GitHub Pages部署、手機測試、分享俾朋友</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION: THEME ===== -->
+<div class="section">
+  <h2>🎯 玩家最終體驗</h2>
+
+  <p>完成遊戲後，玩家應該得到嘅感受：</p>
+
+  <div class="highlight">
+    <strong>🎯 「原來馬鞍山以前係咁嘅！」</strong><br><br>
+    透過冒險遊戲嘅形式，將馬鞍山鐵礦場嘅歷史活生生呈現——<br><br>
+    🏛️ 認識香港唯一大型鐵礦場嘅完整運作<br>
+    🏘️ 了解礦村四區嘅社群文化<br>
+    ⛪ 知道兩間教會喺礦村嘅貢獻<br>
+    🌊 體驗馬鞍山由礦村到新市鎮嘅轉變<br>
+    ❤️ 對自己住嘅社區產生歸屬感同好奇<br><br>
+    <strong>—— 「我而家行過耀安邨停車場，都會諗起以前呢度係礦石碼頭」</strong>
+  </div>
+</div>
+
+<div class="footer">
+  由 無虛 (mvmv) 製作 · 2026-07-15 煞科夜 · 分享版本<br>
+  參考資料：鞍山探索館、馬鞍山民康促進會、沙田今昔、天行古蹟檔案館
+</div>
+
+</div>
+</body>
+</html>
