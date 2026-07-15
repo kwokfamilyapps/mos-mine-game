@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>馬鞍山鐵礦場瘋狂礦車大冒險 — 動畫 Storyboard</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0a0e1a;color:#e2e8f0;font-family:system-ui,sans-serif;font-size:22px;overflow-x:hidden}
+  .container{max-width:1100px;margin:0 auto;padding:20px}
+  h1{text-align:center;color:#d4a843;font-size:2.2rem;padding:30px 0;border-bottom:2px solid #1e2a3a}
+  h1 small{display:block;font-size:1rem;color:#94a3b8;margin-top:5px}
+
+  /* Animation Preview Cards */
+  .scene-grid{display:grid;gap:25px;margin:30px 0}
+  .scene-card{background:#141b2d;border-radius:16px;overflow:hidden;border:1px solid #1e2a3a}
+  .scene-header{background:linear-gradient(135deg,#1a2332,#16213e);padding:18px 22px;border-bottom:1px solid #1e2a3a}
+  .scene-header h2{font-size:1.3rem;color:#d4a843}
+  .scene-header .meta{font-size:0.85rem;color:#64748b;margin-top:4px}
+  .scene-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  @media(max-width:700px){.scene-body{grid-template-columns:1fr}}
+
+  /* Animation Player */
+  .anim-player{background:#080c18;padding:20px;display:flex;align-items:center;justify-content:center;min-height:300px;position:relative;overflow:hidden}
+  .anim-canvas{width:100%;height:auto;aspect-ratio:16/9;background:#0a0e1a;border-radius:8px;position:relative;overflow:hidden}
+
+  /* Scene 1: Mountain Aerial */
+  .scene-mountain{width:100%;height:100%;position:absolute;top:0;left:0}
+  .mountain-bg{position:absolute;bottom:0;left:0;width:100%;height:60%;background:linear-gradient(180deg,#2d5016,#1a3a0a);clip-path:polygon(0 100%,10% 40%,20% 60%,35% 20%,50% 40%,65% 15%,80% 35%,90% 25%,100% 50%,100% 100%)}
+  .mountain-sky{position:absolute;top:0;left:0;width:100%;height:50%;background:linear-gradient(180deg,#ff8c42,#ffd700,transparent)}
+  .sun{position:absolute;top:15%;right:25%;width:40px;height:40px;background:radial-gradient(circle,#fff7a0,#ffd700,transparent);border-radius:50%;box-shadow:0 0 60px #ffd70088}
+  .cloud{position:absolute;background:rgba(255,255,255,0.15);border-radius:50px;animation:drift 8s ease-in-out infinite}
+  .cloud1{width:120px;height:25px;top:12%;left:-10%;animation-delay:0s}
+  .cloud2{width:80px;height:18px;top:20%;left:-20%;animation-delay:3s}
+  @keyframes drift{0%{transform:translateX(0)}50%{transform:translateX(30px)}100%{transform:translateX(0)}}
+
+  /* Church silhouette */
+  .church-sil{position:absolute;bottom:38%;right:30%;text-align:center;animation:floatChurch 4s ease-in-out infinite}
+  .church-sil .cross{font-size:2rem;line-height:0.8}
+  .church-sil .roof{width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:25px solid #1a1a2e;margin:0 auto}
+  .church-sil .body{width:40px;height:30px;background:#1a1a2e;margin:0 auto;border-radius:0 0 4px 4px}
+  .church-sil .door{width:10px;height:15px;background:#0a0e1a;margin:0 auto;border-radius:4px 4px 0 0}
+  @keyframes floatChurch{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+  /* Mine entrance */
+  .mine-entrance{position:absolute;bottom:30%;left:20%}
+  .mine-arch{width:80px;height:60px;background:#2d1f14;border:3px solid #5c4033;border-radius:40px 40px 0 0;position:relative}
+  .mine-arch::after{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:50px;height:8px;background:#8b6f3a;border-radius:4px}
+  .mine-label{color:#8b6f3a;font-size:0.6rem;text-align:center;margin-top:2px;font-weight:700}
+
+  /* Camera zoom effect */
+  .cam-zoom{animation:cameraZoom 10s ease-in-out infinite;transform-origin:center}
+  @keyframes cameraZoom{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+
+  /* Scene Details */
+  .scene-details{padding:20px}
+  .scene-details h3{color:#38bdf8;font-size:1.1rem;margin-bottom:8px}
+  .scene-details .desc{color:#94a3b8;font-size:0.9rem;margin-bottom:10px;line-height:1.6}
+  .scene-details .shots{list-style:none;padding:0}
+  .scene-details .shots li{padding:5px 0;font-size:0.85rem;color:#cbd5e1;border-bottom:1px solid #1e2a3a}
+  .scene-details .shots li:last-child{border-bottom:none}
+  .scene-details .shots .time{color:#64748b;font-size:0.75rem;margin-right:8px}
+  .tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;margin-right:5px;margin-top:5px}
+  .tag-orange{background:#5c3d1a;color:#fb923c}
+  .tag-blue{background:#1e3a5f;color:#38bdf8}
+  .tag-green{background:#14532d;color:#4ade80}
+  .tag-red{background:#5c1a1a;color:#f87171}
+
+  /* Chunk transition indicator */
+  .chapter-divider{text-align:center;padding:15px;color:#475569;font-size:1.5rem;letter-spacing:10px}
+
+  /* Loading bar animation */
+  .loading-bar{height:3px;background:#1e2a3a;border-radius:2px;overflow:hidden;margin-top:8px}
+  .loading-bar .fill{height:100%;background:linear-gradient(90deg,#d4a843,#38bdf8);animation:loading 10s ease-in-out infinite;border-radius:2px}
+  @keyframes loading{0%{width:0%}50%{width:100%}100%{width:0%}}
+
+  /* Rail cart animation */
+  .cart{position:absolute;bottom:20%;left:-10%;font-size:2.5rem;animation:cartRide 8s linear infinite}
+  @keyframes cartRide{0%{left:-10%}100%{left:110%}}
+  .track-line{position:absolute;bottom:19%;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,#5c4033,#5c4033,transparent)}
+
+  /* Rain effect */
+  .rain-container{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none}
+  .raindrop{position:absolute;width:1px;background:rgba(255,255,255,0.3);animation:rainfall 0.6s linear infinite}
+  @keyframes rainfall{0%{transform:translateY(-20px);opacity:1}100%{transform:translateY(300px);opacity:0}}
+
+  /* Water rising */
+  .water{position:absolute;bottom:0;left:0;width:100%;height:0%;background:linear-gradient(180deg,rgba(56,189,248,0.3),rgba(56,189,248,0.6));animation:waterRise 10s ease-in-out infinite}
+  @keyframes waterRise{0%{height:0%}50%{height:60%}100%{height:0%}}
+
+  /* Peace Bridge */
+  .bridge-scene{position:relative;width:100%;height:100%}
+  .bridge-plank{position:absolute;bottom:30%;left:10%;width:80%;height:4px;background:#8b6f3a;border-radius:2px}
+  .bridge-plank::before{content:'🪵';position:absolute;top:-25px;left:10%;font-size:1.5rem}
+  .bridge-plank::after{content:'🪵';position:absolute;top:-25px;right:10%;font-size:1.5rem}
+  .bridge-pillar{position:absolute;bottom:25%;left:25%;width:6px;height:30px;background:#6b5240}
+  .bridge-pillar2{position:absolute;bottom:25%;right:25%;width:6px;height:30px;background:#6b5240}
+
+  /* Water flowing under bridge */
+  .stream{position:absolute;bottom:25%;left:0;width:100%;height:20px;overflow:hidden}
+  .stream-line{position:absolute;width:30px;height:2px;background:rgba(56,189,248,0.4);animation:streamFlow 2s linear infinite}
+  @keyframes streamFlow{0%{transform:translateX(-30px)}100%{transform:translateX(110%)}}
+
+  /* Stele */
+  .stele{position:absolute;bottom:28%;left:8%;font-size:0.7rem;color:#d4a843;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:4px;opacity:0.8}
+
+  .footer{text-align:center;padding:40px 20px;color:#475569;font-size:0.9rem}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎬 遊戲動畫 Storyboard — 初稿設計
+    <small>馬鞍山鐵礦場瘋狂礦車大冒險 · 10-15秒 CG 動畫概念</small>
+  </h1>
+
+  <!-- ===== OPENING CINEMATIC ===== -->
+  <div class="scene-grid">
+    <div class="scene-card">
+      <div class="scene-header">
+        <h2>🎞️ 開場動畫（15秒）<span class="tag tag-orange">Opening</span></h2>
+        <div class="meta">鏡頭由高空俯瞰馬鞍山 → zoom in 到山頂區</div>
+      </div>
+      <div class="scene-body">
+        <div class="anim-player">
+          <div class="anim-canvas cam-zoom">
+            <div class="scene-mountain">
+              <div class="mountain-sky"></div>
+              <div class="sun"></div>
+              <div class="cloud cloud1"></div>
+              <div class="cloud cloud2"></div>
+              <div class="mountain-bg"></div>
+              <div class="church-sil">
+                <div class="cross">⛪</div>
+                <div class="roof"></div>
+                <div class="body"><div class="door"></div></div>
+                <div style="color:#64748b;font-size:0.45rem;margin-top:2px;">恩光堂</div>
+              </div>
+              <div class="mine-entrance">
+                <div class="mine-arch"></div>
+                <div class="mine-label">240ML</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="scene-details">
+          <h3>🎥 鏡頭設計</h3>
+          <ul class="shots">
+            <li><span class="time">⏱️ 0-4s</span> 🏔️ 高空俯瞰馬鞍山群峰，晨霧繚繞</li>
+            <li><span class="time">⏱️ 4-8s</span> 🏘️ 鏡頭下降，浮現山頂區教會+礦村石屋</li>
+            <li><span class="time">⏱️ 8-12s</span> 🌉 越過平安橋，石碑「平安槁」特寫</li>
+            <li><span class="time">⏱️ 12-15s</span> ⛰️ Zoom in 240ML礦洞口，標題浮現</li>
+          </ul>
+          <div>
+            <span class="tag tag-blue">🎵 配樂：口琴+風聲</span>
+            <span class="tag tag-green">🎨 色調：暖金+礦灰</span>
+          </div>
+          <div class="loading-bar"><div class="fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHAPTER 2→3 TRANSITION ===== -->
+  <div class="scene-grid">
+    <div class="scene-card">
+      <div class="scene-header">
+        <h2>🚂 章節過場：礦洞穿越（12秒）<span class="tag tag-blue">Transition</span></h2>
+        <div class="meta">240ML → 斜路 → 192ML → 144ML → 直井 → 110ML</div>
+      </div>
+      <div class="scene-body">
+        <div class="anim-player">
+          <div class="anim-canvas">
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:#0a0e1a">
+              <!-- Tunnel walls -->
+              <div style="position:absolute;top:0;left:0;width:100%;height:30%;background:linear-gradient(180deg,#1a0f0a,#0a0e1a)"></div>
+              <div style="position:absolute;bottom:0;left:0;width:100%;height:30%;background:linear-gradient(0deg,#1a0f0a,#0a0e1a)"></div>
+              <!-- Level markers -->
+              <div style="position:absolute;top:15%;left:12%;color:#5c4033;font-size:0.7rem;font-weight:700;animation:fadeOut 10s ease-in-out infinite">240ML</div>
+              <div style="position:absolute;top:35%;left:30%;color:#5c4033;font-size:0.7rem;font-weight:700;opacity:0;animation:fadeMid 10s ease-in-out infinite">192ML</div>
+              <div style="position:absolute;top:55%;left:55%;color:#5c4033;font-size:0.7rem;font-weight:700;opacity:0;animation:fadeMid2 10s ease-in-out infinite">144ML</div>
+              <div style="position:absolute;top:75%;left:80%;color:#38bdf8;font-size:0.7rem;font-weight:700;opacity:0;animation:fadeIn2 10s ease-in-out infinite">🚂 110ML</div>
+              @keyframes fadeOut{0%,20%{opacity:1}25%,100%{opacity:0}}
+              @keyframes fadeMid{0%,20%{opacity:0}25%,45%{opacity:1}50%,100%{opacity:0}}
+              @keyframes fadeMid2{0%,45%{opacity:0}50%,70%{opacity:1}75%,100%{opacity:0}}
+              @keyframes fadeIn2{0%,70%{opacity:0}75%,100%{opacity:1}}
+              <!-- Cart -->
+              <div class="cart">⛏️⬇️</div>
+              <div class="track-line"></div>
+              <!-- Sparks -->
+              <div style="position:absolute;bottom:20%;left:30%;width:4px;height:4px;background:#ffd700;border-radius:50%;box-shadow:0 0 6px #ffd700;animation:spark 1s ease-in-out infinite"></div>
+              @keyframes spark{0%,100%{opacity:0}50%{opacity:1}}
+            </div>
+          </div>
+        </div>
+        <div class="scene-details">
+          <h3>🎥 鏡頭設計</h3>
+          <ul class="shots">
+            <li><span class="time">⏱️ 0-3s</span> 🕳️ 礦車由240ML開始下降，經過「一箱全家」儲水設施</li>
+            <li><span class="time">⏱️ 3-6s</span> 🛤️ 斜路滑行到192ML平台，見到礦工推車</li>
+            <li><span class="time">⏱️ 6-8s</span> ⛏️ 經過144ML，礦工用風鑽鑽孔爆破場景</li>
+            <li><span class="time">⏱️ 8-12s</span> 🕳️ 直井自由落體 → 110ML燈光亮起 🚂</li>
+          </ul>
+          <div>
+            <span class="tag tag-blue">🎵 配樂：礦車金屬聲+風聲</span>
+            <span class="tag tag-red">💡 燈光由暗轉光</span>
+          </div>
+          <div class="loading-bar"><div class="fill" style="animation:loading 12s ease-in-out infinite"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BOSS INTRO ===== -->
+  <div class="scene-grid">
+    <div class="scene-card">
+      <div class="scene-header">
+        <h2>🌊 BOSS 登場：洪水預警（10秒）<span class="tag tag-red">BOSS Intro</span></h2>
+        <div class="meta">耀安邨 — 暴雨中嘅停車場洪水</div>
+      </div>
+      <div class="scene-body">
+        <div class="anim-player">
+          <div class="anim-canvas">
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,#1a1a2e,#0a0e1a)">
+              <!-- Dark storm clouds -->
+              <div style="position:absolute;top:0;left:0;width:100%;height:40%;background:linear-gradient(180deg,#2d1a1a,#1a1a2e,transparent)"></div>
+              <!-- Lightning flash -->
+              <div style="position:absolute;top:5%;left:40%;width:2px;height:40px;background:#fff;opacity:0;border-radius:2px;box-shadow:0 0 20px #fff;animation:lightning 4s ease-in-out infinite"></div>
+              <div style="position:absolute;top:8%;left:60%;width:1px;height:25px;background:#fff;opacity:0;border-radius:2px;box-shadow:0 0 15px #fff;animation:lightning 4s ease-in-out infinite 1.5s"></div>
+              @keyframes lightning{0%,3%,100%{opacity:0}1%,2%{opacity:1}}
+              <!-- Buildings -->
+              <div style="position:absolute;bottom:15%;left:20%;width:50px;height:80px;background:#1a2332;border:1px solid #2a3a4a;border-radius:2px"></div>
+              <div style="position:absolute;bottom:15%;left:35%;width:60px;height:100px;background:#1a2332;border:1px solid #2a3a4a;border-radius:2px"></div>
+              <div style="position:absolute;bottom:15%;left:55%;width:45px;height:70px;background:#1a2332;border:1px solid #2a3a4a;border-radius:2px"></div>
+              <!-- Rain -->
+              <div class="rain-container" id="rainContainer"></div>
+              <!-- Rising water -->
+              <div class="water"></div>
+              <!-- Flood warning -->
+              <div style="position:absolute;top:45%;left:50%;transform:translateX(-50%);color:#f87171;font-size:0.8rem;font-weight:700;text-shadow:0 0 20px rgba(248,113,113,0.5);animation:warning 2s ease-in-out infinite">⚠️ 洪水警報</div>
+              @keyframes warning{0%,100%{opacity:0.5}50%{opacity:1}}
+            </div>
+          </div>
+        </div>
+        <div class="scene-details">
+          <h3>🎥 鏡頭設計</h3>
+          <ul class="shots">
+            <li><span class="time">⏱️ 0-3s</span> ⚡ 烏雲密佈，閃電劃破長空</li>
+            <li><span class="time">⏱️ 3-6s</span> 🌧️ 暴雨傾盆，耀安邨停車場開始積水</li>
+            <li><span class="time">⏱️ 6-10s</span> 🌊 洪水急速上漲，汽車飄起，BOSS名浮現</li>
+          </ul>
+          <div>
+            <span class="tag tag-blue">🎵 配樂：雷聲+緊張弦樂</span>
+            <span class="tag tag-red">🎨 色調：暗灰+藍</span>
+          </div>
+          <div class="loading-bar"><div class="fill" style="animation:loading 10s ease-in-out infinite"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ALL SCENES LIST ===== -->
+  <div class="scene-grid">
+    <div class="scene-card">
+      <div class="scene-header">
+        <h2>📋 全遊戲動畫列表（共7段）</h2>
+        <div class="meta">每段10-15秒，用於開場/章節過場/BOSS登場</div>
+      </div>
+      <div class="scene-details" style="border:none">
+        <table style="width:100%;font-size:0.9rem">
+          <tr><th>#</th><th>位置</th><th>時長</th><th>內容</th><th>風格</th></tr>
+          <tr><td>🎬</td><td>開場</td><td>15s</td><td>山頂鳥瞰→教會→平安橋→240ML</td><td>暖金晨光</td></tr>
+          <tr><td>1➡️2</td><td>Ch1→Ch2</td><td>10s</td><td>平安橋石碑→警衛室翻牌🔴→入礦</td><td>清晨薄霧</td></tr>
+          <tr><td>2➡️3</td><td>Ch2→Ch3</td><td>12s</td><td>240ML→斜路→192ML→144ML→直井→110ML</td><td>礦洞燈光</td></tr>
+          <tr><td>3➡️4</td><td>Ch3→Ch4</td><td>10s</td><td>110ML電動火車啟動→衝出礦洞</td><td>工業機械</td></tr>
+          <tr><td>4➡️5</td><td>Ch4→Ch5</td><td>10s</td><td>選礦廠機器運作→運輸帶→碼頭貨輪</td><td>24hr工廠</td></tr>
+          <tr><td>5➡️6</td><td>Ch5→Ch6</td><td>12s</td><td>天光墟清晨開檔→魚佬擔魚返來→教會鐘聲</td><td>生活氣息</td></tr>
+          <tr><td>🌊</td><td>BOSS登場</td><td>10s</td><td>烏雲閃電→暴雨→耀安邨洪水</td><td>暗黑緊張</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NEXT STEPS ===== -->
+  <div style="background:linear-gradient(135deg,#1a2a1a,#0a1a0a);border:1px solid #14532d;border-radius:14px;padding:30px;margin:30px 0;text-align:center">
+    <h2 style="color:#4ade80;font-size:1.5rem;margin-bottom:15px;">🎯 下一步：ComfyUI 生成</h2>
+    <p style="color:#94a3b8;font-size:1rem;line-height:1.8;">
+      Storyboard 你睇完 OK 嘅話，我就用你部電腦嘅 <strong>ComfyUI-EZi Launcher</strong> 生成真正嘅 3D 動畫！<br>
+      每段約10-15秒，會用你部電腦嘅 RTX 5060 顯示卡 local 運算，唔使額外俾錢 😎
+    </p>
+    <div style="margin-top:20px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap;">
+      <span style="background:#1e3a5f;color:#38bdf8;padding:8px 20px;border-radius:8px;">🖥️ ComfyUI Workflow</span>
+      <span style="background:#14532d;color:#4ade80;padding:8px 20px;border-radius:8px;">🎨 PixArt/Stable Diffusion</span>
+      <span style="background:#5c3d1a;color:#fb923c;padding:8px 20px;border-radius:8px;">🎬 逐格生成動畫</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  由 無虛 (mvmv) 製作 · 馬鞍山鐵礦場瘋狂礦車大冒險 · 動畫 Storyboard 初稿
+</div>
+
+<script>
+// Generate rain drops for BOSS scene
+(function(){
+  const container = document.getElementById('rainContainer');
+  if(!container) return;
+  for(let i=0;i<60;i++){
+    const drop = document.createElement('div');
+    drop.className = 'raindrop';
+    drop.style.left = Math.random()*100+'%';
+    drop.style.height = (8+Math.random()*12)+'px';
+    drop.style.animationDuration = (0.3+Math.random()*0.4)+'s';
+    drop.style.animationDelay = Math.random()*0.5+'s';
+    container.appendChild(drop);
+  }
+})();
+</script>
+</body>
+</html>
