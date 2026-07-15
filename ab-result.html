@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>天光墟 A+B 結果</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:sans-serif;padding:20px}
+.container{max-width:900px;margin:0 auto}
+h1{color:#d4a843;font-size:1.5rem;text-align:center;margin-bottom:20px}
+.card{background:#141b2d;border:1px solid #1e2a3a;border-radius:12px;padding:20px;margin-bottom:20px}
+.card h2{color:#38bdf8;font-size:1.2rem;margin-bottom:10px}
+.card p{color:#94a3b8;font-size:0.9rem;margin-bottom:10px}
+video{width:100%;border-radius:8px;background:#000}
+img{width:100%;border-radius:8px}
+.tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:0.8rem;margin-right:5px}
+.tag-green{background:#14532d;color:#4ade80}
+.tag-orange{background:#5c3d1a;color:#fb923c}
+.tag-red{background:#5c1a1a;color:#f87171}
+</style></head>
+<body>
+<div class="container">
+<h1>🌅 天光墟 — A+B 結果比較</h1>
+
+<div class="card">
+<h2>🅰️ 真實相片動畫 — 恩光堂正面</h2>
+<p><span class="tag tag-green">真實場景</span> 1960年代恩光堂真實相片，鏡頭運動</p>
+<video controls autoplay loop playsinline preload="auto">
+<source src="https://kwokfamilyapps.github.io/mos-mine-game/a_church.mp4" type="video/mp4">
+</video>
+</div>
+
+<div class="card">
+<h2>🅰️ 真實相片動畫 — 恩光堂門前小路</h2>
+<p><span class="tag tag-green">真實場景</span> 教堂門前小路，當年天光墟位置</p>
+<video controls autoplay loop playsinline preload="auto">
+<source src="https://kwokfamilyapps.github.io/mos-mine-game/a_path.mp4" type="video/mp4">
+</video>
+</div>
+
+<div class="card">
+<h2>🅱️ ComfyUI img2img — 教堂變天光墟</h2>
+<p><span class="tag tag-orange">AI生成</span> 用真實教堂相做 input，img2img 加入市集元素</p>
+<img src="https://kwokfamilyapps.github.io/mos-mine-game/ab-comparison-img.png" alt="img2img result" onerror="this.outerHTML='<p style=color:#f87171>❌ 圖片load唔到</p>'">
+</div>
+
+<p style="text-align:center;color:#475569;font-size:0.8rem;margin-top:20px">
+由 ComfyUI + 真實相片生成 · 馬鞍山鐵礦場瘋狂礦車大冒險
+</p>
+</div></body></html>
