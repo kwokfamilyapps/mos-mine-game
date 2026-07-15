@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>馬鞍山鐵礦場 — 電影級開場 Cinematic Trailer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh}
+#c{width:100%;max-width:1000px;aspect-ratio:21/9;display:block;border-radius:8px;box-shadow:0 0 80px rgba(212,168,67,0.1)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let W,H; function resize(){W=c.width=c.clientWidth;H=c.height=c.clientHeight} resize(); window.onresize=resize;
+
+const FPS=60,TOTAL=FPS*20; // 20 seconds
+let frame=0;
+let audioCtx=null;
+
+function initAudio(){
+  if(!audioCtx) audioCtx=new (window.AudioContext||webkitAudioContext)();
+}
+function playTone(freq,dur,start,type='sine',vol=0.08){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type; o.frequency.value=freq; g.gain.setValueAtTime(vol,audioCtx.currentTime+start);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+start+dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(audioCtx.currentTime+start); o.stop(audioCtx.currentTime+start+dur);
+}
+function playBell(){
+  playTone(880,0.06,0,'sine',0.04); playTone(1320,0.04,0.02,'sine',0.02);
+  playTone(660,0.08,0.04,'sine',0.03);
+}
+function playChord(){
+  playTone(220,0.15,0,'sawtooth',0.02); playTone(330,0.12,0.05,'sawtooth',0.015);
+  playTone(440,0.1,0.08,'sawtooth',0.01);
+}
+function playDramaticHit(){
+  playTone(80,0.5,0,'sawtooth',0.06); playTone(60,0.6,0.1,'square',0.04);
+}
+function playWind(){
+  for(let i=0;i<3;i++) playTone(200+i*50,0.3,i*0.15,'sine',0.015);
+}
+
+let soundPlayed={};
+function triggerSound(frameNum){
+  if(!soundPlayed[frameNum]){
+    soundPlayed[frameNum]=true;
+    const t=frameNum/60;
+    if(frameNum===1) initAudio();
+    if(frameNum===30) playWind();
+    if(frameNum===90) playWind();
+    if(frameNum===150) playChord();
+    if(frameNum===300) playBell();
+    if(frameNum===420) playBell();
+    if(frameNum===540) playWind();
+    if(frameNum===660){playDramaticHit();playBell();}
+    if(frameNum===840) playTone(60,1,0,'sine',0.04);
+  }
+}
+
+function draw(){
+  const t=frame/60; // time in seconds
+  triggerSound(frame);
+  
+  // === BLACK & FIRST IMPRESSION ===
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  
+  // Letterbox bars
+  const barH=H*0.12;
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,barH); ctx.fillRect(0,H-barH,W,barH);
+  
+  // === SHOT 1:0-3s DARK MYSTERY ===
+  if(t<3){
+    const dark=1-t/3*0.7;
+    // Lightning flash at 0.5s
+    if(t>0.4 && t<0.6){ctx.fillStyle='rgba(255,255,255,'+(0.8*(1-Math.abs(t-0.5)*10))+')';ctx.fillRect(0,0,W,H);}
+    // Silhouette of mountain
+    ctx.fillStyle=`rgba(20,15,10,${dark})`;
+    ctx.beginPath(); ctx.moveTo(0,H);
+    for(let x=0;x<=W;x+=3){ctx.lineTo(x,H*0.5-Math.sin(x*0.005)*H*0.12-Math.sin(x*0.011)*H*0.05)}
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    // Distant lights (mystery)
+    for(let i=0;i<5;i++){
+      const lx=W*(0.2+i*0.15)+Math.sin(t*0.5+i)*5;
+      const ly=H*(0.45+Math.sin(i*2)*0.03);
+      ctx.fillStyle=`rgba(255,200,100,${0.1+Math.sin(t*2+i)*0.05})`;
+      ctx.beginPath(); ctx.arc(lx,ly,2+Math.sin(t*3+i)*0.5,0,Math.PI*2); ctx.fill();
+    }
+    // Text: Faint title
+    if(t>1.5){
+      const a=Math.min(1,(t-1.5)*2);
+      ctx.fillStyle=`rgba(212,168,67,${a*0.3})`;
+      ctx.font='bold '+Math.floor(W*0.04)+'px serif'; ctx.textAlign='center';
+      ctx.fillText('1960年代 · 香港馬鞍山',W/2,H*0.35);
+    }
+  }
+  
+  // === SHOT 2:3-7s DRAMATIC REVEAL ===
+  else if(t<7){
+    const st=t-3;
+    // Mountain emerging from darkness
+    const bright=Math.min(1,st*1.5);
+    const grad=ctx.createLinearGradient(0,0,0,H*0.4);
+    grad.addColorStop(0,`rgb(${10+Math.floor(bright*30)},${8+Math.floor(bright*20)},${15+Math.floor(bright*40)})`);
+    grad.addColorStop(1,`rgb(${80+Math.floor(bright*120)},${60+Math.floor(bright*80)},${40+Math.floor(bright*60)})`);
+    ctx.fillStyle=grad; ctx.fillRect(0,0,W,H*0.4);
+    
+    // Sun rising (dramatic)
+    const sunX=W*0.75; const sunY=H*0.3-st*8;
+    if(sunY>H*0.05){
+      const grd=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,120);
+      grd.addColorStop(0,`rgba(255,200,80,${bright*0.7})`);
+      grd.addColorStop(0.3,`rgba(255,150,50,${bright*0.3})`);
+      grd.addColorStop(1,'rgba(255,150,50,0)');
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(sunX,sunY,120,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=`rgba(255,220,150,${bright*0.9})`;
+      ctx.beginPath(); ctx.arc(sunX,sunY,15,0,Math.PI*2); ctx.fill();
+    }
+    
+    // Mist
+    ctx.fillStyle=`rgba(200,180,150,${0.2-bright*0.1})`;
+    ctx.fillRect(0,H*0.25,W,H*0.15);
+    
+    // Deep mountain silhouette
+    ctx.fillStyle=`rgb(${20+Math.floor(bright*30)},${30+Math.floor(bright*40)},${15+Math.floor(bright*25)})`;
+    ctx.beginPath(); ctx.moveTo(0,H);
+    for(let x=0;x<=W;x+=2){
+      const y=H*0.4-Math.sin(x*0.002+1)*H*0.12-Math.sin(x*0.005+2)*H*0.06-Math.sin(x*0.01+0.5)*H*0.03;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    
+    // Mining village with more detail
+    const vy=H*0.48; const vx=W*0.4;
+    for(let i=0;i<10;i++){
+      const hx=vx+i*12+Math.sin(i*1.5)*4;
+      const hy=vy+Math.sin(i*2)*3;
+      ctx.fillStyle='#3a2a1a'; ctx.fillRect(hx,hy,10,8);
+      ctx.fillStyle='#5a4a2a'; ctx.fillRect(hx+1,hy-4,8,4);
+      // window glow
+      ctx.fillStyle=`rgba(255,200,100,${0.2+Math.sin(t+ i)*0.1})`;
+      ctx.fillRect(hx+3,hy+1,2,3);
+    }
+    
+    // Church with cross
+    const chX=W*0.55; const chY=H*0.40-st*0.5;
+    ctx.fillStyle='#4a3a2a'; ctx.fillRect(chX-8,chY,16,14);
+    ctx.fillStyle='#6a5a3a';
+    ctx.beginPath(); ctx.moveTo(chX-10,chY); ctx.lineTo(chX,chY-12); ctx.lineTo(chX+10,chY); ctx.closePath(); ctx.fill();
+    // Cross glowing
+    ctx.shadowColor='#d4a843'; ctx.shadowBlur=15;
+    ctx.strokeStyle='#d4a843'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(chX,chY-18); ctx.lineTo(chX,chY-5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(chX-4,chY-12); ctx.lineTo(chX+4,chY-12); ctx.stroke();
+    ctx.shadowBlur=0;
+    
+    // Dramatic light rays
+    for(let i=0;i<4;i++){
+      const rx=W*(0.3+i*0.12); const ry=H*0.2;
+      ctx.fillStyle=`rgba(255,200,100,${0.04-bright*0.02})`;
+      ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-30,H*0.6); ctx.lineTo(rx+30,H*0.6); ctx.closePath(); ctx.fill();
+    }
+  }
+  
+  // === SHOT 3:7-11s MINE ENTRANCE REVEAL ===
+  else if(t<11){
+    const st=t-7;
+    const zoom=Math.min(1,st*0.8);
+    
+    // Dark tunnel feel
+    ctx.fillStyle='#0a0808'; ctx.fillRect(0,0,W,H);
+    
+    // Mine entrance (growing larger)
+    const mScale=0.5+zoom*0.5;
+    const mX=W/2; const mY=H*0.55;
+    const mW=160*mScale; const mH=120*mScale;
+    
+    // Entrance arch
+    ctx.fillStyle='#1a0f0a'; ctx.beginPath();
+    ctx.moveTo(mX-mW/2,mY); ctx.lineTo(mX-mW/2+10,mY-mH+20);
+    ctx.quadraticCurveTo(mX,mY-mH-10,mX+mW/2-10,mY-mH+20);
+    ctx.lineTo(mX+mW/2,mY); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#5c4033'; ctx.lineWidth=3; ctx.stroke();
+    
+    // 240ML text glowing
+    ctx.shadowColor='#8b6f3a'; ctx.shadowBlur=20;
+    ctx.fillStyle='#8b6f3a';
+    ctx.font='bold '+Math.floor(20*mScale)+'px monospace'; ctx.textAlign='center';
+    ctx.fillText('240M.L.',mX,mY-mH+25);
+    ctx.shadowBlur=0;
+    
+    // Exhaust fans (two circles)
+    ctx.strokeStyle='#5c4033'; ctx.lineWidth=2;
+    for(let side=-1;side<=1;side+=2){
+      ctx.beginPath(); ctx.arc(mX+side*18*mScale/100,mY-mH+40,10*mScale/100,0,Math.PI*2); ctx.stroke();
+      // Fan blades spinning
+      const fanAngle=frame*0.1;
+      ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=2;
+      for(let b=0;b<3;b++){
+        const a=fanAngle+b*2.1;
+        ctx.beginPath();
+        ctx.moveTo(mX+side*18*mScale/100,mY-mH+40);
+        ctx.lineTo(mX+side*18*mScale/100+Math.cos(a)*8*mScale/100,mY-mH+40+Math.sin(a)*8*mScale/100);
+        ctx.stroke();
+      }
+    }
+    
+    // Deep darkness inside tunnel
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.beginPath(); ctx.moveTo(mX-mW/4,mY-mH/2);
+    ctx.quadraticCurveTo(mX,mY-mH/2-5,mX+mW/4,mY-mH/2);
+    ctx.lineTo(mX+mW/6,mY-5); ctx.lineTo(mX-mW/6,mY-5); ctx.closePath(); ctx.fill();
+    
+    // Mine cart silhouette at entrance
+    if(st>0.3){
+      const cartX=mX-20*mScale/100; const cartY=mY-5;
+      ctx.fillStyle='#1a1510';
+      ctx.fillRect(cartX,cartY,25*mScale/100,10*mScale/100);
+      ctx.beginPath(); ctx.arc(cartX+4*mScale/100,cartY+10*mScale/100,4*mScale/100,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cartX+18*mScale/100,cartY+10*mScale/100,4*mScale/100,0,Math.PI*2); ctx.fill();
+    }
+    
+    // Water tank
+    ctx.fillStyle='#2a2a3a'; ctx.fillRect(mX-30*mScale/100,mY-mH-20*mScale/100,60*mScale/100,12*mScale/100);
+    ctx.fillStyle='#4a4a5a'; ctx.fillRect(mX-32*mScale/100,mY-mH-22*mScale/100,64*mScale/100,3*mScale/100);
+    ctx.fillStyle='#8b6f3a';
+    ctx.font=Math.floor(7*mScale)+'px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('一箱全家',mX,mY-mH-10*mScale/100);
+  }
+  
+  // === SHOT 4:11-15s MINER'S LANTERN ===
+  else if(t<15){
+    const st=t-11;
+    ctx.fillStyle='#0a0808'; ctx.fillRect(0,0,W,H);
+    
+    // Lantern light (swaying)
+    const lX=W*0.4; const lY=H*0.3+Math.sin(st*3)*5;
+    const grd=ctx.createRadialGradient(lX,lY,0,lX,lY,80);
+    grd.addColorStop(0,'rgba(255,150,50,0.4)');
+    grd.addColorStop(0.3,'rgba(255,100,30,0.15)');
+    grd.addColorStop(1,'rgba(255,100,30,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(lX,lY,80,0,Math.PI*2); ctx.fill();
+    
+    // Lantern body
+    ctx.fillStyle='#8b6f3a'; ctx.fillRect(lX-5,lY-8,10,16);
+    ctx.fillStyle='#f5c842'; ctx.fillRect(lX-3,lY-5,6,10);
+    
+    // Miner silhouette (walking into tunnel)
+    const mX=W*0.35; const mY=H*0.5;
+    ctx.fillStyle='#1a1510';
+    ctx.fillRect(mX-5,mY-15,10,20); // body
+    ctx.beginPath(); ctx.arc(mX,mY-20,6,0,Math.PI*2); ctx.fill(); // head
+    ctx.fillRect(mX-3,mY+2,6,10); // legs
+    
+    // Name tag briefly visible
+    if(st>0.5 && st<1.5){
+      const tagA=Math.min(1,(st-0.5)*5, (1.5-st)*5);
+      ctx.fillStyle=`rgba(150,120,80,${tagA*0.8})`;
+      ctx.fillRect(mX-8,mY-30,16,10);
+      ctx.fillStyle=`rgba(212,168,67,${tagA})`;
+      ctx.font='5px serif'; ctx.textAlign='center';
+      ctx.fillText('陳大栓',mX,mY-23);
+    }
+    
+    // Faint tunnel walls
+    ctx.strokeStyle='rgba(60,40,30,0.3)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(W*0.1,H*0.2); ctx.lineTo(W*0.15,H*0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.9,H*0.2); ctx.lineTo(W*0.85,H*0.8); ctx.stroke();
+  }
+  
+  // === SHOT 5:15-18s MINE CART RUSH ===
+  else if(t<18){
+    const st=t-15;
+    ctx.fillStyle='#050505'; ctx.fillRect(0,0,W,H);
+    
+    // Tunnel walls rushing by (parallax)
+    const speed=1+st*0.5;
+    for(let i=0;i<6;i++){
+      const wx=W*(0.1+((st*speed*200+i*100)%W)/W);
+      ctx.fillStyle='rgba(60,40,30,0.15)';
+      ctx.fillRect(wx,H*0.1,3,H*0.8);
+    }
+    
+    // Cart in center (shaking)
+    const cX=W/2+Math.sin(st*20)*3;
+    const cY=H*0.5+Math.sin(st*15)*2;
+    ctx.fillStyle='#2a1a10'; ctx.fillRect(cX-15,cY-5,30,10);
+    ctx.fillStyle='#4a3a2a'; ctx.fillRect(cX-13,cY-8,26,3);
+    // Ore inside
+    ctx.fillStyle='#5c4033';
+    for(let i=0;i<4;i++){ctx.fillRect(cX-10+i*6,cY-6,4,4);}
+    // Wheels
+    ctx.fillStyle='#1a1510';
+    ctx.beginPath(); ctx.arc(cX-10,cY+6,4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cX+10,cY+6,4,0,Math.PI*2); ctx.fill();
+    // Wheel spokes spinning
+    const a=frame*0.2;
+    ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cX-10+Math.cos(a)*4,cY+6+Math.sin(a)*4);
+    ctx.lineTo(cX-10-Math.cos(a)*4,cY+6-Math.sin(a)*4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cX+10+Math.cos(a)*4,cY+6+Math.sin(a)*4);
+    ctx.lineTo(cX+10-Math.cos(a)*4,cY+6-Math.sin(a)*4); ctx.stroke();
+    
+    // Sparks
+    for(let i=0;i<3;i++){
+      const spX=cX-8+Math.sin(frame*0.3+i*2)*20;
+      const spY=cY+8+Math.cos(frame*0.5+i*2)*5;
+      ctx.fillStyle=`rgba(255,200,50,${0.3+Math.sin(frame*0.5+i)*0.3})`;
+      ctx.beginPath(); ctx.arc(spX,spY,1.5,0,Math.PI*2); ctx.fill();
+    }
+  }
+  
+  // === SHOT 6:18-20s TITLE REVEAL ===
+  else{
+    const st=t-18;
+    ctx.fillStyle='#050505'; ctx.fillRect(0,0,W,H);
+    
+    // Dramatic light burst from center
+    const burst=Math.min(1,st*2);
+    const grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,200*burst);
+    grd.addColorStop(0,'rgba(212,168,67,0.15)');
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(W/2,H/2,200*burst,0,Math.PI*2); ctx.fill();
+    
+    // Title text with dramatic reveal
+    const a=Math.min(1,(st-0.5)*3);
+    ctx.shadowColor='rgba(212,168,67,0.5)'; ctx.shadowBlur=30*a;
+    ctx.fillStyle=`rgba(212,168,67,${a})`;
+    ctx.font='bold '+Math.floor(W*0.055)+'px serif'; ctx.textAlign='center';
+    ctx.fillText('馬鞍山鐵礦場',W/2,H*0.4);
+    ctx.shadowBlur=15*a;
+    ctx.fillStyle=`rgba(255,220,150,${a*0.8})`;
+    ctx.font='bold '+Math.floor(W*0.035)+'px serif';
+    ctx.fillText('瘋狂礦車大冒險',W/2,H*0.4+W*0.045);
+    ctx.shadowBlur=0;
+    
+    // Subtitle
+    ctx.fillStyle=`rgba(148,163,184,${a*0.6})`;
+    ctx.font=Math.floor(W*0.018)+'px sans-serif';
+    ctx.fillText('MA ON SHAN IRON MINE · CRAZY MINE CART ADVENTURE',W/2,H*0.4+W*0.07);
+    
+    // Decorative lines
+    ctx.strokeStyle=`rgba(212,168,67,${a*0.4})`; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(W*0.25,H*0.33); ctx.lineTo(W*0.42,H*0.33); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.58,H*0.33); ctx.lineTo(W*0.75,H*0.33); ctx.stroke();
+  }
+  
+  // === PERSISTENT ELEMENTS ===
+  // Letterbox bars (always on top)
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,barH); ctx.fillRect(0,H-barH,W,barH);
+  
+  // Subtle vignette
+  const vignette=ctx.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.7);
+  vignette.addColorStop(0,'rgba(0,0,0,0)');
+  vignette.addColorStop(1,'rgba(0,0,0,0.4)');
+  ctx.fillStyle=vignette; ctx.fillRect(0,0,W,H);
+  
+  // Film grain
+  const imgData=ctx.getImageData(0,0,W,H);
+  const d=imgData.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()-0.5)*4;
+    d[i]+=n; d[i+1]+=n; d[i+2]+=n;
+  }
+  ctx.putImageData(imgData,0,0);
+  
+  frame++;
+  if(frame<TOTAL) requestAnimationFrame(draw);
+  else{frame=0;requestAnimationFrame(draw);}
+}
+draw();
+</script>
+</body>
+</html>
