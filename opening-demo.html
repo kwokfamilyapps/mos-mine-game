@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MOS 開場動畫 Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh}
+#c{width:100%;max-width:900px;aspect-ratio:16/9;display:block;border-radius:12px;box-shadow:0 0 60px rgba(212,168,67,0.15)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let W,H; function resize(){W=c.width=c.clientWidth;H=c.height=c.clientHeight} resize(); window.onresize=resize;
+
+const TOTAL=450; // 15s at 30fps
+let frame=0;
+
+// Elements
+const church={x:0.7,y:0.32};
+const mine={x:0.25,y:0.55};
+const bridge={x:0.45,y:0.58};
+const stele={x:0.35,y:0.56};
+
+function draw(){
+  const t=frame/TOTAL; // 0→1
+  const zoom=1+t*0.4; // camera zoom
+  const cx=0.5+t*0.15; // camera pan right
+  const cy=0.5-t*0.1; // camera slightly up
+  
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  // Camera transform
+  ctx.translate(W/2,H/2);
+  ctx.scale(zoom,zoom);
+  ctx.translate(-W*cx,-H*cy);
+  
+  // Sky gradient
+  const skyGrad=ctx.createLinearGradient(0,0,0,H*0.5);
+  skyGrad.addColorStop(0,'#1a0f2a');
+  skyGrad.addColorStop(0.3+t*0.1,'#e8734a');
+  skyGrad.addColorStop(0.5+t*0.15,'#f5c842');
+  skyGrad.addColorStop(0.7+t*0.1,'#d4a843');
+  ctx.fillStyle=skyGrad;
+  ctx.fillRect(0,0,W,H*0.6);
+  
+  // Sun glow
+  const sunX=W*0.75+t*W*0.05;
+  const sunY=H*0.2-t*H*0.03;
+  const grd=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,100+t*30);
+  grd.addColorStop(0,'rgba(255,215,0,0.8)');
+  grd.addColorStop(0.3,'rgba(255,180,50,0.3)');
+  grd.addColorStop(1,'rgba(255,180,50,0)');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(sunX,sunY,100+t*30,0,Math.PI*2); ctx.fill();
+  // Sun circle
+  ctx.fillStyle='#ffe066'; ctx.beginPath(); ctx.arc(sunX,sunY,20,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,200,0.3)'; ctx.beginPath(); ctx.arc(sunX,sunY,35,0,Math.PI*2); ctx.fill();
+  
+  // Clouds
+  for(let i=0;i<4;i++){
+    const cx2=((i*0.3+frame*0.002)%1.2-0.1)*W;
+    const cy2=H*(0.1+i*0.06)+Math.sin(frame*0.01+i)*8;
+    ctx.fillStyle='rgba(255,200,150,'+(0.08+Math.sin(frame*0.005+i)*0.04)+')';
+    ctx.beginPath(); ctx.ellipse(cx2,cy2,50+Math.sin(i)*20,15,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx2+30,cy2-5,35+Math.cos(i)*15,12,0,0,Math.PI*2); ctx.fill();
+  }
+  
+  // Far mountains
+  ctx.fillStyle='#2d3a1a';
+  ctx.beginPath(); ctx.moveTo(0,H*0.45);
+  for(let x=0;x<=W;x+=5){ctx.lineTo(x,H*(0.45+Math.sin(x*0.003)*0.08+Math.sin(x*0.007)*0.04))}
+  ctx.lineTo(W,H*0.6); ctx.lineTo(0,H*0.6); ctx.closePath(); ctx.fill();
+  
+  // Near mountains
+  ctx.fillStyle='#3d4a20';
+  ctx.beginPath(); ctx.moveTo(0,H*0.50);
+  for(let x=0;x<=W;x+=5){ctx.lineTo(x,H*(0.50+Math.sin(x*0.004+1)*0.1+Math.sin(x*0.008+2)*0.05))}
+  ctx.lineTo(W,H*0.65); ctx.lineTo(0,H*0.65); ctx.closePath(); ctx.fill();
+  
+  // Mining village houses
+  const vx=W*0.6; const vy=H*0.48;
+  ctx.fillStyle='#4a3a2a';
+  for(let i=0;i<6;i++){
+    const hx=vx+i*20+Math.sin(i*2)*8;
+    const hy=vy+Math.sin(i*3)*6;
+    ctx.fillStyle='#5c4a3a'; ctx.fillRect(hx,hy,16,12);
+    ctx.fillStyle='#8b6f3a'; ctx.fillRect(hx+2,hy-6,12,6);
+    ctx.fillStyle='#f5c842'; ctx.fillRect(hx+6,hy+2,4,6);
+  }
+  
+  // Church on hill
+  const chX=W*0.7; const chY=H*0.40;
+  ctx.fillStyle='#6b5a4a'; ctx.fillRect(chX-15,chY,30,25);
+  ctx.fillStyle='#8b7a5a'; ctx.beginPath();
+  ctx.moveTo(chX-18,chY); ctx.lineTo(chX,chY-18); ctx.lineTo(chX+18,chY); ctx.closePath(); ctx.fill();
+  // Cross
+  ctx.strokeStyle='#d4a843'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(chX,chY-28); ctx.lineTo(chX,chY-8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(chX-6,chY-18); ctx.lineTo(chX+6,chY-18); ctx.stroke();
+  // Bell tower
+  ctx.fillStyle='#5a4a3a'; ctx.fillRect(chX-4,chY-22,8,8);
+  ctx.fillStyle='#d4a843'; ctx.fillRect(chX-2,chY-20,4,4);
+  // Church label
+  ctx.fillStyle='rgba(212,168,67,'+(0.5+Math.sin(frame*0.02)*0.3)+')';
+  ctx.font='10px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('恩光堂',chX,chY+15);
+  
+  // Peace Bridge
+  ctx.strokeStyle='#6b5a4a'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(W*0.30,H*0.56); ctx.lineTo(W*0.55,H*0.56); ctx.stroke();
+  ctx.strokeStyle='#5a4a3a'; ctx.lineWidth=4;
+  for(let i=0;i<3;i++){
+    const px=W*(0.33+i*0.12);
+    ctx.beginPath(); ctx.moveTo(px,H*0.56); ctx.lineTo(px,H*0.62); ctx.stroke();
+  }
+  // Stream under bridge
+  ctx.fillStyle='rgba(56,189,248,'+(0.2+Math.sin(frame*0.03)*0.1)+')';
+  ctx.fillRect(W*0.28,H*0.58,W*0.28,8);
+  
+  // Stele at bridge head
+  const stX=W*0.30; const stY=H*0.52;
+  ctx.fillStyle='#4a4a4a'; ctx.fillRect(stX-4,stY-18,8,24);
+  ctx.fillStyle='#6a6a6a'; ctx.fillRect(stX-5,stY-20,10,4);
+  // Stele text (vertical)
+  ctx.fillStyle='#a08050';
+  ctx.save(); ctx.translate(stX+1,stY-12);
+  ['平','安','槁'].forEach((ch,i)=>{
+    ctx.fillStyle='#c4a060'; ctx.font='7px serif'; ctx.textAlign='center';
+    ctx.fillText(ch,0,i*8);
+  }); ctx.restore();
+  
+  // 240ML Mine entrance
+  const mX=W*0.22; const mY=H*0.52;
+  ctx.fillStyle='#2d1f14'; ctx.beginPath();
+  ctx.moveTo(mX-18,mY); ctx.lineTo(mX-15,mY-20); ctx.quadraticCurveTo(mX,mY-30,mX+15,mY-20);
+  ctx.lineTo(mX+18,mY); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#5c4033'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#8b6f3a'; ctx.font='6px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('240M.L.',mX,mY-5);
+  // Exhaust fans (two circles)
+  ctx.strokeStyle='#5c4033'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(mX-6,mY-14,4,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(mX+6,mY-14,4,0,Math.PI*2); ctx.stroke();
+  
+  // Water tank (一箱全家)
+  ctx.fillStyle='#3a3a4a'; ctx.fillRect(mX-22,mY-32,44,12);
+  ctx.fillStyle='#5a5a6a'; ctx.fillRect(mX-24,mY-34,48,3);
+  ctx.fillStyle='#d4a843'; ctx.font='5px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('一箱全家',mX,mY-24);
+  
+  // Foreground trees
+  ctx.fillStyle='#1a2a0a';
+  for(let i=0;i<8;i++){
+    const tx=W*(0.05+i*0.13); const ty=H*(0.5+Math.sin(i)*0.03);
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+10,ty-20); ctx.lineTo(tx-10,ty-20); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#2a3a1a';
+  }
+  
+  // Title text (appears after 60% through)
+  if(t>0.55){
+    const alpha=Math.min(1,(t-0.55)*8);
+    ctx.fillStyle=`rgba(212,168,67,${alpha})`;
+    ctx.font='bold 28px serif'; ctx.textAlign='center';
+    ctx.fillText('馬鞍山鐵礦場',W/2,H*0.2);
+    ctx.fillStyle=`rgba(148,163,184,${alpha*0.7})`;
+    ctx.font='14px sans-serif'; ctx.fillText('1960年代 — 瘋狂礦車大冒險',W/2,H*0.2+22);
+  }
+  
+  // Subtle film grain overlay
+  const imageData=ctx.getImageData(0,0,W,H);
+  const d=imageData.data;
+  for(let i=0;i<d.length;i+=4){
+    const noise=(Math.random()-0.5)*6;
+    d[i]+=noise; d[i+1]+=noise; d[i+2]+=noise;
+  }
+  ctx.putImageData(imageData,0,0);
+  
+  ctx.restore();
+  frame=(frame+1)%TOTAL;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
