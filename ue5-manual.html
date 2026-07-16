@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>礦村觀光列車 — Blueprint 構建手冊</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:"Segoe UI",sans-serif;padding:20px;font-size:18px;line-height:1.7}
+.container{max-width:960px;margin:0 auto}
+h1{color:#fbbf24;font-size:1.8rem;text-align:center}
+h2{color:#38bdf8;font-size:1.3rem;margin:20px 0 10px;border-bottom:1px solid #1e2a3a;padding-bottom:6px}
+h3{color:#a78bfa;font-size:1.1rem;margin:15px 0 6px}
+.sub{color:#94a3b8;text-align:center;font-size:0.85rem;margin-bottom:20px}
+.card{background:#141b2d;border:1px solid #1e2a3a;border-radius:10px;padding:16px;margin:12px 0}
+.code{background:#0a0e1a;border:1px solid #1e2a3a;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:0.85rem;color:#4ade80;margin:6px 0;overflow-x:auto;white-space:pre}
+.node{color:#38bdf8}
+.pin{color:#fbbf24}
+.val{color:#4ade80}
+.cmt{color:#475569;font-style:italic}
+.tip{background:#0f1525;border-left:3px solid #4ade80;padding:10px;margin:8px 0;border-radius:0 6px 6px 0;font-size:0.9rem}
+.caution{background:#0f1525;border-left:3px solid #f87171;padding:10px;margin:8px 0;border-radius:0 6px 6px 0;font-size:0.9rem}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:0.9rem}
+th{background:#1e2a3a;color:#fbbf24;padding:8px;text-align:left}
+td{padding:7px 8px;border-bottom:1px solid #1e2a3a}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🛠️ UE5 Blueprint 構建手冊</h1>
+<p class="sub">Project 已起好喺：<code>C:\Users\verno\Documents\Unreal Projects\MineTrain\MineTrain.uproject</code></p>
+<p style="text-align:center">雙擊 .uproject 就可以開 UE5 ▶️</p>
+
+<h2>Step 1：開 Project + 起 Main Level</h2>
+<div class="card">
+<strong>1.1 雙擊開 Project</strong>
+<div class="code">C:\Users\verno\Documents\Unreal Projects\MineTrain\MineTrain.uproject</div>
+<div>UE5 會問你要咪重建，㩒 <span class="node">Yes</span> 等佢 compile。</div>
+</div>
+
+<div class="card">
+<strong>1.2 開新 Level</strong>
+<div class="code">File → New Level → <span class="node">Empty Level</span> → Save As → <span class="val">MainLevel</span></div>
+<div>Save 喺：<span class="pin">Content/Maps/MainLevel.umap</span></div>
+</div>
+
+<h2>Step 2：整 Landscape 地形</h2>
+<div class="card">
+<strong>2.1 開 Landscape Mode</strong>
+<div class="code">Toolbar → Landscape Mode（山仔icon）→ New Landscape</div>
+<table>
+<tr><th>設定</th><th>數值</th></tr>
+<tr><td>Section Size</td><td>7x7 (255x255 quads)</td></tr>
+<tr><td>Scale</td><td>100 x 100 x 50</td></tr>
+<tr><td>Location</td><td>Z = -50（地平線）</td></tr>
+</table>
+</div>
+
+<div class="card">
+<strong>2.2 雕塑地形</strong>
+<div class="code">Sculpt Tool → 筆刷 Size 20 → 力度 0.5</div>
+<ul style="margin:8px 0 0 20px">
+<li>South-East 角升高（240ML山頂）</li>
+<li>North-West 角放低（耀安邨海邊）</li>
+<li>中間整蜿蜒河谷</li>
+</ul>
+</div>
+
+<h2>Step 3：BP_TrackSpline（路軌）</h2>
+<div class="card">
+<strong>3.1 建立 Blueprint</div>
+<div class="code">Content Browser → 右鍵 → Blueprint Class → <span class="node">Actor</span></div>
+<div>改名：<span class="val">BP_TrackSpline</span></div>
+
+<strong>3.2 加 Spline Component</strong>
+<div class="code">Components → Add → <span class="node">Spline Component</span> → 改名 <span class="val">TrackSpline</span></div>
+<div>Details 入面㩒 <span class="pin">+</span> 加 Spline Points，由山頂拉到海邊</div>
+
+<strong>3.3 加路軌 Mesh</strong>
+<div class="code">用 <span class="node">SplineMesh Component</span> 動態生成路軌</div>
+<div class="code">Event BeginPlay → 
+  For Loop (0 to SplinePointsNum-2) →
+    Get Location at Spline Point (i) →
+    Get Location at Spline Point (i+1) →
+    Create SplineMesh Component →
+    Set Start/End Position & Tangent</div>
+</div>
+
+<h2>Step 4：BP_MineCart（礦車）</h2>
+<div class="card">
+<strong>4.1 建立 Blueprint</div>
+<div class="code">Content Browser → 右鍵 → Blueprint Class → <span class="node">Pawn</span></div>
+<div>改名：<span class="val">BP_MineCart</span></div>
+
+<strong>4.2 Components</strong>
+<table>
+<tr><th>Component</th><th>Add</th><th>設定</th></tr>
+<tr><td>Root</td><td>預設</td><td>-</td></tr>
+<tr><td>CartMesh</td><td>Static Mesh</td><td>揀 Shape_QuadPyramid / 自訂礦車模型</td></tr>
+<tr><td>SpringArm</td><td>SpringArm Component</td><td>位置 Z=150, Y=-200, Lag=0.3</td></tr>
+<tr><td>Camera</td><td>Camera Component</td><td>跟 SpringArm</td></tr>
+<tr><td>Collision</td><td>Box Collision</td><td>Size 100x60x80</td></tr>
+</table>
+
+<strong>4.3 變量 Variables</strong>
+<table>
+<tr><th>名稱</th><th>類型</th><th>預設</th></tr>
+<tr><td>TrackSplineRef</td><td>Actor</td><td>None</td></tr>
+<tr><td>Speed</td><td>Float</td><td>0</td></tr>
+<tr><td>MaxSpeed</td><td>Float</td><td>300</td></tr>
+<tr><td>DistanceAlong</td><td>Float</td><td>0</td></tr>
+<tr><td>bIsMoving</td><td>Boolean</td><td>false</td></tr>
+<tr><td>bAutoMode</td><td>Boolean</td><td>true</td></tr>
+</table>
+
+<strong>4.4 Event Tick（核心移動邏輯）</strong>
+<div class="code">Event Tick → [DeltaTime]
+  Branch (bIsMoving OR bAutoMode)
+    True →
+      Speed = (bAutoMode ? 150 : Speed)
+      Distance = Distance + Speed * DeltaTime
+      Clamp Distance (min:0, max:SplineLength)
+      Get Location at Distance Along Spline [TrackSplineRef]
+      Set Actor Location + Set Actor Rotation
+    False → (do nothing)
+</div>
+
+<strong>4.5 鍵盤 Input</strong>
+<div class="code">Project Settings → Input → Bindings
+  W → 加速 (Speed +50)
+  S → 減速 (Speed -50)
+  Space → 自動模式開關 (bAutoMode = !bAutoMode)
+</div>
+</div>
+
+<h2>Step 5：BP_NarratorStation（語音站）</h2>
+<div class="card">
+<strong>5.1 建立 Blueprint</div>
+<div class="code">Blueprint Class → <span class="node">Actor</span> → 改名 <span class="val">BP_NarratorStation</span></div>
+
+<strong>5.2 Components</strong>
+<div class="code">Box Collision → Trigger Volume → Size 200x200x200
+Billboard → 顯示站名</div>
+
+<strong>5.3 變量</strong>
+<table>
+<tr><th>名稱</th><th>類型</th></tr>
+<tr><td>StationName</td><td>Text</td></tr>
+<tr><td>NarratioText</td><td>Text</td></tr>
+<tr><td>AudioFile</td><td>Sound Wave</td></tr>
+<tr><td>WaitTime</td><td>Float (default: 30)</td></tr>
+</table>
+
+<strong>5.4 觸發邏輯</strong>
+<div class="code">OnActorBeginOverlap →
+  Stop the cart (bIsMoving = false)
+  Play narration audio
+  Display subtitles
+  Wait WaitTime seconds
+  Resume (bIsMoving = true)
+</div>
+
+<strong>5.5 放置6個車站 Level</strong>
+<table>
+<tr><th>站</th><th>位置</th><th>WaitTime</th></tr>
+<tr><td>240ML 礦洞入口</td><td>Spline 起點</td><td>20s</td></tr>
+<tr><td>選礦廠</td><td>路程1/4</td><td>30s</td></tr>
+<tr><td>恩光堂</td><td>路程2/5</td><td>30s</td></tr>
+<tr><td>🌅 天光墟</td><td>路程1/2</td><td>45s</td></tr>
+<tr><td>平安橋</td><td>路程2/3</td><td>20s</td></tr>
+<tr><td>耀安邨碼頭</td><td>終點</td><td>自由</td></tr>
+</table>
+</div>
+
+<h2>Step 6：天光墟場景（清晨市集）</h2>
+<div class="card">
+<strong>6.1 晨光設定</strong>
+<div class="code">置入 DirectionalLight → 
+  Rotation: -30度 → Color: 暖色 1.0,0.8,0.6
+置入 Sky Atmosphere → 調到日出 mode
+  
+建議加 Exponential Height Fog → 低層霧效果</div>
+
+<strong>6.2 檔口擺設</strong>
+<table>
+<tr><th>檔口</th><th>Mesh</th><th>擺位</th></tr>
+<tr><td>菜檔</td><td>Box + 螺旋儀</td><td>路邊</td></tr>
+<tr><td>魚檔</td><td>Box + 魚 Static Mesh</td><td>菜檔隔離</td></tr>
+<tr><td>豬肉檔</td><td>Box + 紅色 Block</td><td>中間位</td></tr>
+<tr><td>燒餅佬</td><td>Box + 圓形 Mesh</td><td>教堂門口</td></tr>
+<tr><td>雲吞麵</td><td>Box + Steam Particle</td><td>尾位</td></tr>
+<tr><td>士多</td><td>Box + 彩色點綴</td><td>路口</td></tr>
+</table>
+
+<strong>6.3 環境聲</strong>
+<div class="code">Add Ambient Sound → 天光墟叫賣聲（mp3）
+可以用之前我生成嘅 AI voice stop6-market.ogg</div>
+</div>
+
+<h2>Step 7：打包測試</h2>
+<div class="card">
+<strong>7.1 手機測試</strong>
+<div class="code">Toolbar → Platforms → Android / IOS → 
+  Project Settings → Android → 包名設定 →
+  Bundle Identifier: com.minecart.tramtour</div>
+
+<strong>7.2 PC 測試</h2>
+<div class="code">Toolbar → Launch → Windows → 直接 Play</div>
+</div>
+
+<h2>📋 今日完工 Checklist</h2>
+<table>
+<tr><th>#</th><th>任務</th><th>狀態</th></tr>
+<tr><td>1</td><td>.uproject 已建立</td><td>✅ 雙擊即開</td></tr>
+<tr><td>2</td><td>Config 檔案</td><td>✅ DefaultGame.ini</td></tr>
+<tr><td>3</td><td>BP_TrackSpline</td><td>📝 要喺 UE5 入面整</td></tr>
+<tr><td>4</td><td>BP_MineCart</td><td>📝 要喺 UE5 入面整</td></tr>
+<tr><td>5</td><td>BP_NarratorStation</td><td>📝 要喺 UE5 入面整</td></tr>
+<tr><td>6</td><td>天光墟場景</td><td>📝 要喺 UE5 入面整</td></tr>
+</table>
+
+<div class="tip">
+<strong>💡 聽日你起身時：</strong><br>
+雙擊 <code>MineTrain.uproject</code> → 跟住呢本手冊 → 由 Step 1 開始做<br>
+卡關就 cap 圖俾我睇，我幫手 🚋
+</div>
+
+</div>
+</body>
+</html>
