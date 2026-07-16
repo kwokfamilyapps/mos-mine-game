@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>UE5 礦村觀光列車 — 開工指南</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:"Segoe UI",sans-serif;padding:20px;font-size:18px;line-height:1.7}
+.container{max-width:900px;margin:0 auto}
+h1{color:#fbbf24;font-size:1.8rem;text-align:center;margin-bottom:4px}
+h2{color:#38bdf8;font-size:1.3rem;margin:20px 0 10px;border-bottom:1px solid #1e2a3a;padding-bottom:6px}
+h3{color:#a78bfa;font-size:1.1rem;margin:15px 0 6px}
+.sub{color:#94a3b8;text-align:center;font-size:0.85rem;margin-bottom:20px}
+.step{background:#141b2d;border:1px solid #1e2a3a;border-radius:10px;padding:16px;margin:12px 0}
+.step .num{color:#fbbf24;font-weight:bold;font-size:1rem}
+.step .title{color:#e2e8f0;font-size:1rem;margin:2px 0}
+.step .detail{color:#94a3b8;font-size:0.9rem;margin-top:6px;line-height:1.6}
+.code{background:#0a0e1a;border:1px solid #1e2a3a;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:0.85rem;color:#4ade80;margin:6px 0;overflow-x:auto;white-space:pre}
+.highlight{color:#fbbf24;font-weight:bold}
+.tip{background:#0f1525;border-left:3px solid #4ade80;padding:10px;margin:8px 0;border-radius:0 6px 6px 0;font-size:0.9rem}
+.tip strong{color:#4ade80}
+.caution{background:#0f1525;border-left:3px solid #f87171;padding:10px;margin:8px 0;border-radius:0 6px 6px 0;font-size:0.9rem}
+.caution strong{color:#f87171}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:0.9rem}
+th{background:#1e2a3a;color:#fbbf24;padding:8px 10px;text-align:left}
+td{padding:7px 10px;border-bottom:1px solid #1e2a3a}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🎬 UE5 開工指南</h1>
+<p class="sub">礦村觀光列車 — 從零開始逐步教學</p>
+
+<div class="tip">
+<strong>📌 開工前準備：</strong>
+<ul style="margin-top:5px;list-style:none;padding-left:0">
+<li>✅ Unreal Engine 5.4+ 已安裝</li>
+<li>✅ 開新 Project：選 <span class="highlight">Blank</span> → <span class="highlight">Third Person</span> → Mobile/Tablet</li>
+<li>✅ 建議開新 Folder：<code>C:\UE5_MineTrain</code></li>
+</ul>
+</div>
+
+<h2>Phase 1：Spline 路軌 + 礦車（今日開工）</h2>
+
+<div class="step">
+<div class="num">第1步：開新 Project</div>
+<div class="detail">
+打開 UE5 → New Project → Games → Blank → 
+<span class="highlight">選「With Starter Content」</span>→ Blueprint → 
+Project Location: 你自己揀位 → Create
+</div>
+</div>
+
+<div class="step">
+<div class="num">第2步：建立 Spline 路軌 Blueprint</div>
+<div class="detail">
+1. 喺 Content Browser ➡ 右鍵 ➡ Blueprint Class ➡ 揀 <span class="highlight">Actor</span><br>
+2. 改名：<span class="highlight">BP_TrackSpline</span><br>
+3. 雙擊打開 BP_TrackSpline<br>
+4. 左邊 Components 面板 ➡ Add Component ➡ 揀 <span class="highlight">Spline Component</span><br>
+5. 改名：<span class="highlight">TrackSpline</span>
+</div>
+<div class="code">
+// 跟住去 Event Graph<br>
+// 未需要寫 code，住要個 spline 做主幹
+</div>
+</div>
+
+<div class="step">
+<div class="num">第3步：建立礦車 Blueprint</div>
+<div class="detail">
+1. Content Browser ➡ 右鍵 ➡ Blueprint Class ➡ 揀 <span class="highlight">Pawn</span><br>
+2. 改名：<span class="highlight">BP_MineCart</span><br>
+3. 雙擊打開，Components 加以下：<br><br>
+<table>
+<tr><th>Component</th><th>設定</th></tr>
+<tr><td>StaticMesh</td><td>揀 <span class="highlight">Shape_QuadPyramid</span> 做車身（暫用）</td></tr>
+<tr><td>SpringArm</td><td>位置 Z +150</td></tr>
+<tr><td>Camera</td><td>跟 SpringArm</td></tr>
+<tr><td>SphereCollision</td><td>Radius 50，做碰撞</td></tr>
+</table>
+</div>
+</div>
+
+<div class="step">
+<div class="num">第4步：寫礦車移動邏輯（核心！）</div>
+<div class="detail">
+打開 BP_MineCart 嘅 Event Graph，跟住整：</div>
+<div class="code">
+// === VARIABLES（變量）===
+// 類型: Actor       名稱: TrackSplineRef    預設: None
+// 類型: Float       名稱: Speed             預設: 0
+// 類型: Float       名稱: MaxSpeed          預設: 500
+// 類型: Float       名稱: DistanceAlong     預設: 0
+// 類型: Boolean     名稱: bIsMoving         預設: false
+
+// === EVENT TICK ===
+1. 喺 Event Graph 空白位右鍵 ➡ 打 "Tick" ➡ 揀 Event Tick
+
+2. 拉出 Event Tick ➡ 右鍵 ➡ 打 "Branch"
+
+3. 拉出 Branch Condition ➡ 右鍵 ➡ 打 "bIsMoving"
+
+4. 拉出 Branch True ➡ 右鍵 ➡ 打 "Get Distance Along Spline"
+
+5. 拉出 TrackSplineRef 個 pin ➡ 右鍵 ➡ 打 "Spline Length"
+
+6. 拉出 Get Distance Along Spline Return Value ➡ + ➡ Speed * Delta Time ➡ 
+   ➡ 做 Clamp (min:0, max:[Spline Length])
+
+7. 結果 Set Distance Along Spline
+
+8. 拉出 TrackSplineRef ➡ 右鍵 ➡ 打 "Get Location at Distance Along Spline"
+   ➡ 連接 Distance 同 Return Value
+
+9. 拉出 Get Location ➡ 右鍵 ➡ 打 "Set Actor Location"
+</div>
+</div>
+
+<div class="step">
+<div class="num">第5步：鍵盤控制加減速</div>
+<div class="detail">同樣喺 BP_MineCart Event Graph：</div>
+<div class="code">
+// 加速（W鍵）
+1. Event Graph 空白 ➡ 右鍵 ➡ "Keyboard Event W"（或 "InputAction 加速"）
+
+2. 拉出 Pressed pin ➡ Sequence ➡ Then 0:
+   ➡ 打 "bIsMoving = true"
+   ➡ Then 1:
+   ➡ 做 "Speed = MaxSpeed"
+
+// 減速（S鍵）
+3. Keyboard Event S ➡ Pressed ➡ "Speed = MaxSpeed * 0.3"（慢速）
+   ➡ Released ➡ "Speed = 0" + "bIsMoving = false"
+
+// 調校速度
+建議初始 MaxSpeed = 300（慢速觀光）
+將來可以整油門/煞車 analog 控制
+</div>
+</div>
+
+<div class="step">
+<div class="num">第6步：拉路軌落 Level</div>
+<div class="detail">
+1. 㩒返 Content Browser → 將 <span class="highlight">BP_TrackSpline</span> 拉去 Level<br>
+2. 選中 BP_TrackSpline → Details → Spline 嘅 <span class="highlight">Spline Points</span><br>
+3. 㩒 <span class="highlight">+</span> 加點，逐個拉出蜿蜒路軌<br>
+4. 最少 5-6 個點，扭少少彎<br>
+5. 將 <span class="highlight">BP_MineCart</span> 都拉落 Level<br>
+6. 選中 BP_MineCart → Details → TrackSplineRef → 㩒 <span class="highlight">▶ 揀返你條路軌</span><br>
+7. Play 測試！W 加速，S 減速
+</div>
+</div>
+
+<div class="step">
+<div class="num">第7步：整條靚仔啲嘅路軌</div>
+<div class="detail">
+用 Static Mesh 整 rails 同 sleepers：</div>
+<div class="code">
+// Rail Mesh
+喺 BP_TrackSpline ➡ Add Component ➡ SplineMesh Component
+改名：RailMeshes
+
+// 搵個長條形 mesh 做路軌
+// 可用 Starter Content 嘅 Shape_Cube (scale 拉長)
+// 或者市場下載 railway track mesh
+
+// 用 Spline Mesh 沿 Spline 鋪路軌：
+Event BeginPlay ➡ 
+  ➡ 用 For Loop 行 spline points
+  ➡ 每兩個 point 之間放一條 SplineMesh
+  ➡ Set Start/End Position & Tangent
+</div>
+</div>
+
+<h2>Phase 2：地形 + 場景（第2日）</h2>
+
+<div class="step">
+<div class="num">第1步：起 Landscape 地形</div>
+<div class="detail">
+1. Toolbar ➡ Landscape Mode<br>
+2. 揀 <span class="highlight">New Landscape</span><br>
+3. Section Size: 7x7 (大約 255x255)<br>
+4. 用 Sculpt Tool 整山丘、斜坡<br>
+5. 建議：路軌起點（240ML）要高，終點（耀安邨）要低<br>
+6. Paint 草地材質
+</div>
+</div>
+
+<div class="step">
+<div class="num">第2步：場景建築擺位</div>
+<div class="detail">
+用 Starter Content 嘅 Box / Cylinder 暫代建築物：</div>
+<table>
+<tr><th>建築</th><th>大概位置</th><th>暫用 Mesh</th></tr>
+<tr><td>240ML 礦洞入口</td><td>起點（地勢高處）</td><td>Box 拼成方形入口</td></tr>
+<tr><td>選礦廠</td><td>中途</td><td>Box 組合</td></tr>
+<tr><td>恩光堂</td><td>礦村區</td><td>Box 做主體 + Cone做尖頂</td></tr>
+<tr><td>天光墟</td><td>恩光堂門外</td><td>小路 + Box 做檔口</td></tr>
+<tr><td>平安橋</td><td>山澗位置</td><td>Box 做橋面</td></tr>
+<tr><td>礦村屋</td><td>沿路散落</td><td>Box 組合</td></tr>
+<tr><td>耀安邨碼頭</td><td>終點（地勢低處）</td><td>平面+Box 做碼頭</td></tr>
+</table>
+</div>
+
+<div class="tip">
+<strong>💡 貼士：</strong>先用 Box 拼出大概位置，確認路線同距離啱先，唔使一開始就整靚模型。
+</div>
+
+<h2>📦 推薦免費 Assets</h2>
+<table>
+<tr><th>Asset</th><th>來源</th><th>用途</th></tr>
+<tr><td>Quixel Megascans</td><td>UE5 內置（Bridge）</td><td>岩石、樹木、地面材質</td></tr>
+<tr><td>Stylized Asian Village</td><td>Marketplace（免費）</td><td>村屋參考</td></tr>
+<tr><td>Railway Track Pack</td><td>Marketplace</td><td>路軌 mesh</td></tr>
+<tr><td>MetaHuman</td><td>UE5 內置</td><td>NPC 人物（礦工/村民）</td></tr>
+</table>
+
+<h2>⚡ 快捷鍵速記</h2>
+<table>
+<tr><th>功能</th><th>快捷鍵</th></tr>
+<tr><td>Play / Stop</td><td>Alt + P / Esc</td></tr>
+<tr><td>移動視角</td><td>右鍵 + WASD</td></tr>
+<tr><td>旋轉物件</td><td>E 鍵</td></tr>
+<tr><td>縮放</td><td>R 鍵 + 拉</td></tr>
+<tr><td>複製</td><td>Alt + 拉動</td></tr>
+<tr><td>儲存全部</td><td>Ctrl + Shift + S</td></tr>
+<tr><td>Content Browser</td><td>Ctrl + Space</td></tr>
+<tr><td>藍圖編輯器</td><td>雙擊 Blueprint</td></tr>
+</table>
+
+<div class="caution">
+<strong>⚠️ 重要提醒：</strong>
+<ul style="margin-top:5px">
+<li>成日㩒 <span class="highlight">Ctrl + S</span> 儲存！UE5 有時會 crash</li>
+<li>手機測試：Toolbar → Platforms → Android / iOS → 打包測試</li>
+<li>效能：開手機版要降低 Draw Distance 同陰影品質</li>
+</ul>
+</div>
+
+<h2>📋 今日（Phase 1）目標清單</h2>
+<ol style="margin:10px 0 0 20px;color:#e2e8f0;font-size:0.95rem;line-height:2">
+<li>✅ 開新 Project</li>
+<li>✅ 整 BP_TrackSpline（Spline 路軌）</li>
+<li>✅ 整 BP_MineCart（Pawn + Camera + 移動邏輯）</li>
+<li>□ 拉路軌落 Level，設 5-6 個 Spline Points</li>
+<li>□ 放礦車落 Level，揀返條路軌</li>
+<li><span class="highlight">□ Play 測試！W 加速，S 減速</span></li>
+</ol>
+
+<div class="tip">
+<strong>🎯 今日目標：</strong>成功見到架礦車沿路軌行走！靚唔靚係其次，郁到先最重要！
+</div>
+
+<p style="text-align:center;color:#475569;font-size:0.8rem;margin-top:30px">
+有任何問題，隨時 cap 畫面俾我睇，我幫你睇 🙏
+</p>
+
+</div>
+</body>
+</html>
