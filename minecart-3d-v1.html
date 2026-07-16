@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>鐵礦瘋狂過山車 3D V1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;touch-action:none;font-family:sans-serif}
+canvas{display:block;width:100vw;height:100dvh}
+#title{position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a0e1a 0%,#1a1f2e 50%,#0a0e1a 100%)}
+#title h1{color:#fbbf24;font-size:28px;margin-bottom:5px}
+#title h2{color:#d4a843;font-size:40px;margin-bottom:10px}
+#title .sub{color:#94a3b8;font-size:13px;margin-bottom:30px;text-align:center}
+#title .btn{padding:14px 60px;border-radius:10px;border:2px solid #4ade80;background:#14532d;color:#4ade80;font-size:20px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block}
+#title .legend{color:#475569;font-size:11px;margin-top:25px;text-align:center;line-height:1.8}
+#hud{position:fixed;top:10px;left:10px;width:auto;z-index:15;pointer-events:none}
+#hud div{background:rgba(0,0,0,0.6);border-radius:6px;padding:5px 12px;color:#e2e8f0;font-size:12px;margin-bottom:4px;display:inline-block}
+#hud .gold{color:#ffd700}
+#controls{position:fixed;bottom:20px;left:0;width:100%;display:flex;justify-content:center;gap:20px;z-index:20;pointer-events:none}
+.ctrl-btn{pointer-events:auto;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.25);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;flex-direction:column}
+.ctrl-btn:active{background:rgba(255,255,255,0.25)}
+.ctrl-btn .label{font-size:9px;opacity:0.7}
+</style>
+</head>
+<body>
+
+<div id="title">
+  <h2>⛏️ 馬鞍山鐵礦場</h2>
+  <h1>瘋狂過山車 3D</h1>
+  <div class="sub">240ML 礦洞 → 礦村 → 耀安邨<br>3D 礦車飛馳體驗</div>
+  <a class="btn" id="startBtn">🚂 出發！</a>
+  <div class="legend">
+    📱 㩒畫面加速 · 放手減速<br>
+    ⌨️ 空白鍵加速 · A/D 左右扭<br>
+    🔥 收集鐵礦石加分！避開障礙物！
+  </div>
+</div>
+<div id="hud">
+  <div>📍 <span id="sectionLabel">240ML 礦洞</span></div>
+  <div class="gold">💰 <span id="scoreVal">0</span></div>
+  <div>⚡ <span id="speedVal">0</span> km/h</div>
+</div>
+<div id="controls">
+  <div class="ctrl-btn" id="btnLeft">⬅<span class="label">左</span></div>
+  <div class="ctrl-btn" id="btnBrake" style="background:rgba(255,50,50,0.15);border-color:rgba(255,50,50,0.3)">⏹<span class="label">減速</span></div>
+  <div class="ctrl-btn" id="btnRight">➡<span class="label">右</span></div>
+  <div class="ctrl-btn" id="btnBoost" style="background:rgba(50,255,50,0.15);border-color:rgba(50,255,50,0.3)">🚀<span class="label">加速</span></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 80, 200);
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 300);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.prepend(renderer.domElement);
+
+// ===== LIGHTS =====
+const ambient = new THREE.AmbientLight(0x404060, 0.5);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffeedd, 1.5);
+sun.position.set(30, 40, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 100;
+sun.shadow.camera.left = -40; sun.shadow.camera.right = 40;
+sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40;
+scene.add(sun);
+const hemi = new THREE.HemisphereLight(0x87ceeb, 0x362d1a, 0.4);
+scene.add(hemi);
+
+// ===== TERRAIN =====
+const groundGeo = new THREE.PlaneGeometry(300, 300, 60, 60);
+const pos = groundGeo.attributes.position.array;
+for (let i = 0; i < pos.length; i += 3) {
+  const x = pos[i], y = pos[i+1];
+  const dist = Math.sqrt(x*x + y*y);
+  pos[i+2] = Math.sin(x*0.05)*Math.cos(y*0.04)*3 + Math.sin(x*0.12+y*0.08)*1.5 + (dist<20? -1:0);
+}
+groundGeo.computeVertexNormals();
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x4a7a3a, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, flatShading: true
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ===== MOUNTAINS =====
+const mtCols = [0x2a2a4a, 0x3a3a5a, 0x1a1a3a];
+for (let i = 0; i < 25; i++) {
+  const angle = Math.random()*Math.PI*2;
+  const dist = 35 + Math.random()*40;
+  const h = 8 + Math.random()*15;
+  const r = 5 + Math.random()*6;
+  const mGeo = new THREE.ConeGeometry(r, h, 7);
+  const mMat = new THREE.MeshStandardMaterial({
+    color: mtCols[Math.floor(Math.random()*mtCols.length)],
+    flatShading: true, roughness: 0.8
+  });
+  const m = new THREE.Mesh(mGeo, mMat);
+  m.position.set(Math.cos(angle)*dist, h/2-2, Math.sin(angle)*dist);
+  m.castShadow = true;
+  scene.add(m);
+}
+
+// ===== TRACK (roller coaster) =====
+const trackPoints = [];
+const trackLength = 200;
+const segments = 300;
+
+// Generate track path: start high (240ML) and go down winding through mountains to sea level
+for (let i = 0; i <= segments; i++) {
+  const t = i / segments;
+  const x = Math.sin(t * 8) * (10 + t*5) + Math.sin(t * 3) * 3;
+  const z = t * trackLength - 30;
+  let y;
+  if (t < 0.15) {
+    // 240ML mine entrance - steep downhill
+    y = 12 - t/0.15 * 5;
+  } else if (t < 0.4) {
+    // Winding through mountain
+    y = 7 - (t-0.15)/0.25 * 4 + Math.sin(t*10)*1;
+  } else if (t < 0.7) {
+    // Village area - gentle slope
+    y = 3 - (t-0.4)/0.3 * 2 + Math.sin(t*6)*0.5;
+  } else {
+    // Coastal flat
+    y = 1 + Math.sin(t*5)*0.3;
+  }
+  trackPoints.push(new THREE.Vector3(x, y, z));
+}
+
+// Create track tube
+const curve = new THREE.CatmullRomCurve3(trackPoints);
+const tubeGeo = new THREE.TubeGeometry(curve, segments, 0.15, 6, false);
+const tubeMat = new THREE.MeshStandardMaterial({
+  color: 0x8B6914, roughness: 0.6, metalness: 0.3
+});
+const track = new THREE.Mesh(tubeGeo, tubeMat);
+track.castShadow = true;
+scene.add(track);
+
+// Rails (two parallel lines)
+const railGeo = new THREE.BufferGeometry();
+const railPositions = [];
+for (let i = 0; i <= segments; i++) {
+  const t = i / segments;
+  const pt = curve.getPointAt(t);
+  const tangent = curve.getTangentAt(t);
+  const normal = new THREE.Vector3(0, 1, 0);
+  const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+  const width = 0.6;
+  const p1 = pt.clone().add(binormal.clone().multiplyScalar(width/2));
+  const p2 = pt.clone().add(binormal.clone().multiplyScalar(-width/2));
+  railPositions.push(p1.x, p1.y, p1.z);
+  railPositions.push(p2.x, p2.y, p2.z);
+}
+railGeo.setAttribute('position', new THREE.Float32BufferAttribute(railPositions, 3));
+const railMat = new THREE.LineBasicMaterial({ color: 0x6b4f30 });
+const railLines = new THREE.LineSegments(railGeo, railMat);
+scene.add(railLines);
+
+// Sleepers
+for (let i = 0; i < segments; i += 3) {
+  const t = i / segments;
+  const pt = curve.getPointAt(t);
+  const tangent = curve.getTangentAt(t);
+  const normal = new THREE.Vector3(0, 1, 0);
+  const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+  const sleeper = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.05, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 })
+  );
+  sleeper.position.copy(pt);
+  sleeper.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), binormal);
+  scene.add(sleeper);
+}
+
+// ===== MINE CART =====
+const cart = new THREE.Group();
+
+// Cart body
+const cartMat = new THREE.MeshStandardMaterial({ color: 0x6b4f30, roughness: 0.7, metalness: 0.4 });
+const cartBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 1.0), cartMat);
+cartBody.position.y = 0.25;
+cartBody.castShadow = true;
+cart.add(cartBody);
+
+// Cart bed (ore)
+const oreMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.9, metalness: 0.1 });
+const ore = new THREE.Mesh(new THREE.SphereGeometry(0.3, 5, 5), oreMat);
+ore.position.set(0, 0.55, 0.1);
+ore.scale.set(1.5, 0.5, 1);
+cart.add(ore);
+
+// Cart wheels
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8, metalness: 0.3 });
+for (let side of [-1, 1]) {
+  for (let w of [-0.4, 0.4]) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8), wheelMat);
+    wheel.rotation.x = Math.PI/2;
+    wheel.position.set(side*0.5, 0.05, w);
+    cart.add(wheel);
+  }
+}
+
+// Headlamp
+const hlMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xfbbf24, emissiveIntensity: 1 });
+const hl = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), hlMat);
+hl.position.set(0, 0.3, -0.55);
+cart.add(hl);
+
+// Headlight beam
+const beamLight = new THREE.SpotLight(0xfbbf24, 5, 20, Math.PI/6, 0.5, 1);
+beamLight.position.set(0, 0.5, -0.6);
+beamLight.target.position.set(0, -1, -10);
+cart.add(beamLight);
+cart.add(beamLight.target);
+
+cart.scale.set(0.8, 0.8, 0.8);
+scene.add(cart);
+
+// ===== TUNNEL SECTIONS =====
+const tunnels = [];
+function createTunnel(pos, len) {
+  const group = new THREE.Group();
+  const tMat = new THREE.MeshStandardMaterial({ color: 0x1a1508, roughness: 0.9, side: THREE.DoubleSide });
+  // Arch shape
+  for (let z = -len/2; z <= len/2; z += 0.5) {
+    const pts = [];
+    for (let a = 0; a <= Math.PI; a += 0.2) {
+      pts.push(new THREE.Vector3(Math.cos(a)*2.5 + 0.5, Math.sin(a)*2.5, z));
+    }
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x2a1f0a }));
+    group.add(l);
+  }
+  group.position.copy(pos);
+  scene.add(group);
+  tunnels.push(group);
+}
+
+// Tunnel at start (240ML)
+createTunnel(new THREE.Vector3(trackPoints[0].x, trackPoints[0].y, trackPoints[0].z), 5);
+
+// ===== BUILDINGS (village) =====
+function createBuilding(x, z, w, h, d, color) {
+  const bMat = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
+  b.position.set(x, h/2, z);
+  b.castShadow = true;
+  scene.add(b);
+  // Roof
+  const rMat = new THREE.MeshStandardMaterial({ color: 0xcc4444, roughness: 0.7 });
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(w*0.7, h*0.4, 4), rMat);
+  roof.position.set(x, h + h*0.2, z);
+  roof.rotation.y = Math.PI/4;
+  scene.add(roof);
+}
+
+// Village buildings along track
+const villagePositions = [
+  [3, 15], [-4, 25], [5, 35], [-6, 42], [7, 55],
+  [-5, 65], [4, 78], [-7, 85], [6, 95], [-4, 108],
+  [5, 115], [-6, 128], [7, 135], [-5, 145]
+];
+for (const [ox, oz] of villagePositions) {
+  const w = 1+Math.random(), h = 1+Math.random()*1.5, d = 1+Math.random();
+  const colors = [0xd4a373, 0xe5989b, 0xb7b7a4, 0xf5cba7];
+  const c = colors[Math.floor(Math.random()*colors.length)];
+  createBuilding(ox, oz-20, w, h, d, c);
+}
+
+// ===== MINE ENTRANCE (240ML) =====
+const mineMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.8 });
+const mineEntrance = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 1), mineMat);
+mineEntrance.position.set(trackPoints[0].x, 2, trackPoints[0].z-1);
+scene.add(mineEntrance);
+// Text sign
+const signMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+const sign = new THREE.Mesh(new THREE.BoxGeometry(3, 0.8, 0.1), signMat);
+sign.position.set(trackPoints[0].x, 4, trackPoints[0].z-0.5);
+scene.add(sign);
+
+// ===== CHURCH (Grace Church) =====
+function createChurch(x, z) {
+  const wMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.6 });
+  const w = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3, 3.5), wMat);
+  w.position.set(x, 1.5, z);
+  scene.add(w);
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x447744, roughness: 0.8 });
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(2, 1.2, 4), roofMat);
+  roof.position.set(x, 3.6, z);
+  roof.rotation.y = Math.PI/4;
+  scene.add(roof);
+  // Bell tower
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), wMat);
+  tower.position.set(x+1.5, 2, z);
+  scene.add(tower);
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1, 4), new THREE.MeshStandardMaterial({ color: 0xcc3333 }));
+  spire.position.set(x+1.5, 4.5, z);
+  scene.add(spire);
+  // Red cross
+  const crossMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+  const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.1), crossMat);
+  crossV.position.set(x+1.5, 4.8, z+0.5);
+  scene.add(crossV);
+  const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.1), crossMat);
+  crossH.position.set(x+1.5, 4.8, z+0.5);
+  scene.add(crossH);
+}
+createChurch(-8, 60);
+
+// ===== TREES =====
+for (let i = 0; i < 40; i++) {
+  const x = (Math.random()-0.5)*60, z = (Math.random()-0.5)*60 + 20;
+  if (Math.abs(x) < 3 && Math.abs(z) < 3) continue;
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.15, 0.8, 4),
+    new THREE.MeshStandardMaterial({ color: 0x4a3520 })
+  );
+  trunk.position.set(x, 0.4, z);
+  scene.add(trunk);
+  const fol = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3+Math.random()*0.3, 4, 4),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.3+Math.random()*0.1, 0.5, 0.2+Math.random()*0.1) })
+  );
+  fol.position.set(x, 1+Math.random()*0.5, z);
+  scene.add(fol);
+}
+
+// ===== COLLECTIBLES (iron ore) =====
+const collectibles = [];
+for (let i = 10; i < segments-10; i += 8) {
+  const t = i / segments;
+  const pt = curve.getPointAt(t);
+  const tangent = curve.getTangentAt(t);
+  const normal = new THREE.Vector3(0, 1, 0);
+  const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+  const offset = (Math.random()-0.5) * 2;
+  const side = Math.random() > 0.5 ? 1 : -1;
+  const cPos = pt.clone().add(binormal.clone().multiplyScalar(side * (0.8 + Math.random())));
+  cPos.y += Math.random()*1.5;
+  
+  const oreMat2 = new THREE.MeshStandardMaterial({
+    color: 0x666688, roughness: 0.6, metalness: 0.5,
+    emissive: 0x4444aa, emissiveIntensity: 0.3
+  });
+  const oreNugget = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), oreMat2);
+  oreNugget.position.copy(cPos);
+  scene.add(oreNugget);
+  collectibles.push({ mesh: oreNugget, collected: false, t });
+}
+
+// ===== OBSTACLES =====
+const obstacleMeshes = [];
+for (let i = 15; i < segments-10; i += 6+Math.floor(Math.random()*8)) {
+  const t = i / segments;
+  const pt = curve.getPointAt(t);
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.9 });
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2+Math.random()*0.2, 0), rockMat);
+  rock.position.copy(pt);
+  rock.position.y += 0.2;
+  rock.position.x += (Math.random()-0.5)*0.4;
+  scene.add(rock);
+  obstacleMeshes.push({ mesh: rock, t });
+}
+
+// ===== GAME STATE =====
+let running = false;
+let progress = 0; // 0 to 1
+let speed = 0;
+const MAX_SPEED = 0.008;
+let score = 0;
+let gameTime = 0;
+
+// ===== INPUT =====
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key.toLowerCase()]=true; if([' ','a','d'].includes(e.key.toLowerCase()))e.preventDefault(); });
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()]=false; });
+
+let touchBoost = false, touchBrake = false, touchLeft = false, touchRight = false;
+document.getElementById('btnBoost').addEventListener('touchstart', e=>{e.preventDefault();touchBoost=true;});
+document.getElementById('btnBoost').addEventListener('touchend', e=>{e.preventDefault();touchBoost=false;});
+document.getElementById('btnBrake').addEventListener('touchstart', e=>{e.preventDefault();touchBrake=true;});
+document.getElementById('btnBrake').addEventListener('touchend', e=>{e.preventDefault();touchBrake=false;});
+document.getElementById('btnLeft').addEventListener('touchstart', e=>{e.preventDefault();touchLeft=true;});
+document.getElementById('btnLeft').addEventListener('touchend', e=>{e.preventDefault();touchLeft=false;});
+document.getElementById('btnRight').addEventListener('touchstart', e=>{e.preventDefault();touchRight=true;});
+document.getElementById('btnRight').addEventListener('touchend', e=>{e.preventDefault();touchRight=false;});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('touchend', e=>{e.preventDefault();startGame();});
+
+function startGame() {
+  document.getElementById('title').style.display = 'none';
+  progress = 0; speed = 0; score = 0; gameTime = 0;
+  collectibles.forEach(c => { c.collected = false; c.mesh.visible = true; });
+  running = true;
+}
+
+// ===== SECTION NAMES =====
+const sections = [
+  { start: 0, name: '240ML 礦洞入口', tunnel: true },
+  { start: 0.1, name: '礦洞內部', tunnel: true },
+  { start: 0.2, name: '192ML 坑道', tunnel: true },
+  { start: 0.3, name: '144ML 斜路', tunnel: false },
+  { start: 0.4, name: '露天礦區', tunnel: false },
+  { start: 0.5, name: '礦村山頂區', tunnel: false },
+  { start: 0.55, name: '恩光堂', tunnel: false },
+  { start: 0.65, name: '馬鞍橋', tunnel: false },
+  { start: 0.75, name: '潮洲村', tunnel: false },
+  { start: 0.85, name: '碼頭區', tunnel: false },
+  { start: 0.95, name: '耀安邨 🏁', tunnel: false },
+];
+
+// ===== UPDATE =====
+function update(dt) {
+  if (!running) return;
+  gameTime += dt;
+
+  // Speed control
+  const boosting = keys[' '] || touchBoost;
+  const braking = touchBrake;
+  if (boosting) speed = Math.min(MAX_SPEED, speed + dt*0.003);
+  else if (braking) speed = Math.max(0.001, speed - dt*0.005);
+  else speed = Math.max(0.002, Math.min(MAX_SPEED*0.7, speed + dt*0.001));
+
+  // Steering
+  const steer = (keys['a']||touchLeft ? 1 : 0) - (keys['d']||touchRight ? 1 : 0);
+
+  progress += speed * dt * 2;
+  if (progress >= 1) { progress = 1; running = false; }
+
+  const t = progress;
+  const pt = curve.getPointAt(t);
+  const tangent = curve.getTangentAt(t);
+
+  // Camera position (behind cart, slightly above)
+  const camOffset = new THREE.Vector3(0, 1.5, -2.5);
+  const camWorldPos = pt.clone().add(
+    new THREE.Vector3(0, 1, 0).clone().multiplyScalar(camOffset.y)
+  ).add(
+    tangent.clone().normalize().multiplyScalar(camOffset.z)
+  );
+  // Add steering lean
+  camWorldPos.x += steer * 0.5;
+
+  camera.position.copy(camWorldPos);
+  camera.lookAt(pt.x, pt.y + 0.5, pt.z);
+
+  // Cart position
+  cart.position.copy(pt);
+  cart.position.y += 0.3;
+  // Cart orientation follows track
+  const up = new THREE.Vector3(0, 1, 0);
+  const quat = new THREE.Quaternion().setFromUnitVectors(up, tangent.clone().normalize());
+  cart.quaternion.copy(quat);
+  // Cart steering lean
+  cart.position.x += steer * 0.3;
+
+  // Cart wheel rotation
+  cart.children.forEach(c => {
+    if (c.geometry && c.geometry.type === 'CylinderGeometry' && c.position.z !== 0) {
+      c.rotation.z += speed * 10;
+    }
+  });
+
+  // Cart bounce
+  cart.position.y += Math.sin(gameTime*15) * 0.02;
+
+  // Check collectibles
+  for (const c of collectibles) {
+    if (c.collected) continue;
+    if (Math.abs(t - c.t) < 0.02) {
+      c.collected = true;
+      c.mesh.visible = false;
+      score += 10;
+    }
+  }
+
+  // Check obstacles (simplified - just slow down)
+  for (const o of obstacleMeshes) {
+    if (Math.abs(t - o.t) < 0.015 && speed > 0.003) {
+      speed *= 0.5;
+      score = Math.max(0, score - 5);
+    }
+  }
+
+  // HUD
+  const sectionName = sections.filter(s => t >= s.start).pop();
+  document.getElementById('sectionLabel').textContent = sectionName ? sectionName.name : '礦場旅程';
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('speedVal').textContent = Math.floor(speed / MAX_SPEED * 100);
+
+  // Tunnel darkening
+  if (sectionName && sectionName.tunnel) {
+    scene.background.setHex(0x0a0a0a);
+    sun.intensity = 0.3;
+    scene.fog.color.setHex(0x0a0a0a);
+  } else {
+    scene.background.setHex(0x87ceeb);
+    sun.intensity = 1.5;
+    scene.fog.color.setHex(0x87ceeb);
+  }
+
+  // End
+  if (progress >= 1) {
+    running = false;
+    // Auto restart after delay
+    setTimeout(() => {
+      progress = 0; speed = 0; score = 0;
+      collectibles.forEach(c => { c.collected = false; c.mesh.visible = true; });
+      running = true;
+    }, 3000);
+  }
+}
+
+// ===== RESIZE =====
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===== LOOP =====
+let lastTime = 0;
+function animate(time) {
+  const dt = Math.min((time-lastTime)/1000, 0.05);
+  lastTime = time;
+  update(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+animate(0);
+</script>
+</body>
+</html>
