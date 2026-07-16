@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>礦村無雙 3D V1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;touch-action:none;font-family:sans-serif}
+canvas{display:block;width:100vw;height:100dvh}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#hud{position:absolute;bottom:20px;left:0;width:100%;display:flex;justify-content:space-between;padding:0 15px;pointer-events:none}
+.hud-bar{background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 10px;color:#fff;font-size:11px;min-width:80px}
+.hud-bar .fill{height:6px;border-radius:3px;margin-top:3px;transition:width 0.2s}
+#controls{position:fixed;bottom:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:20;pointer-events:none}
+.btn-group{display:flex;gap:5px}
+.ctrl-btn{pointer-events:auto;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer}
+.ctrl-btn:active{background:rgba(255,255,255,0.3)}
+.ctrl-btn.atk{background:rgba(255,50,50,0.25);border-color:rgba(255,50,50,0.5);font-size:14px;font-weight:bold}
+.ctrl-btn.musou{background:rgba(251,191,36,0.25);border-color:rgba(251,191,36,0.5)}
+#title{position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a0e1a 0%,#1a1f2e 50%,#0a0e1a 100%)}
+#title h1{color:#fbbf24;font-size:32px;margin-bottom:5px;text-shadow:0 0 20px rgba(251,191,36,0.3)}
+#title h2{color:#f87171;font-size:48px;margin-bottom:15px;text-shadow:0 0 30px rgba(248,113,113,0.3)}
+#title .sub{color:#38bdf8;font-size:14px;margin-bottom:30px}
+#title .btn{pointer-events:auto;padding:15px 60px;border-radius:10px;border:2px solid #f87171;background:#5c1a1a;color:#f87171;font-size:22px;font-weight:bold;cursor:pointer;text-decoration:none}
+#title .btn:active{background:#7a2222}
+#title .legend{color:#475569;font-size:11px;margin-top:25px;text-align:center;line-height:1.8}
+#gameover,#win{position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.8)}
+#gameover h1{color:#f87171;font-size:36px}
+#win h1{color:#4ade80;font-size:36px}
+.over-score{color:#ffd700;font-size:22px;margin:10px 0}
+.over-stats{color:#94a3b8;font-size:14px;margin-bottom:20px}
+.over-btn{pointer-events:auto;padding:12px 50px;border-radius:10px;border:2px solid #4ade80;background:#14532d;color:#4ade80;font-size:18px;font-weight:bold;cursor:pointer;margin:5px}
+</style>
+</head>
+<body>
+
+<div id="title">
+  <h2>⚔️ 礦村無雙 3D</h2>
+  <h1>礦 工 戰 記</h1>
+  <div class="sub">參照《真三無雙天下》玩法 · 3D 戰場環境</div>
+  <a class="btn" id="startBtn">⚔️ 開始征戰</a>
+  <div class="legend">
+    📱 左下搖桿移動 · 右下攻擊<br>
+    ⌨️ WASD移動 · J攻擊 · K無雙<br>
+    🔥 殺敵蓄無雙 · 滿時按無雙技橫掃戰場
+  </div>
+</div>
+<div id="gameover"><h1>💀 戰敗</h1><div class="over-score" id="goScore"></div><div class="over-stats" id="goStats"></div><a class="over-btn" id="retryBtn">🔄 再戰</a></div>
+<div id="win"><h1>🎉 勝利！</h1><div class="over-score" id="winScore"></div><a class="over-btn" id="againBtn">🔄 再玩</a></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+
+// ===================== SCENE SETUP =====================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+scene.fog = new THREE.Fog(0x1a1a2e, 40, 100);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 200);
+camera.position.set(0, 12, 18);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.prepend(renderer.domElement);
+
+// ===================== LIGHTS =====================
+const ambient = new THREE.AmbientLight(0x404060, 0.6);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xffeedd, 2.0);
+sun.position.set(20, 30, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+sun.shadow.camera.near = 0.5;
+sun.shadow.camera.far = 60;
+sun.shadow.camera.left = -30;
+sun.shadow.camera.right = 30;
+sun.shadow.camera.top = 30;
+sun.shadow.camera.bottom = -30;
+scene.add(sun);
+
+const hemi = new THREE.HemisphereLight(0x87ceeb, 0x362d1a, 0.4);
+scene.add(hemi);
+
+// ===================== TERRAIN =====================
+const groundGeo = new THREE.PlaneGeometry(80, 80, 40, 40);
+const positions = groundGeo.attributes.position.array;
+for (let i = 0; i < positions.length; i += 3) {
+  const x = positions[i], y = positions[i+1];
+  const dist = Math.sqrt(x*x + y*y);
+  if (dist > 5) positions[i+2] = Math.sin(x*0.3)*Math.cos(y*0.3)*0.5 + Math.random()*0.2;
+}
+groundGeo.computeVertexNormals();
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x3a5a2a,
+  roughness: 0.9,
+  metalness: 0.0,
+  side: THREE.DoubleSide,
+  flatShading: true
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ===================== MOUNTAINS =====================
+for (let i = 0; i < 12; i++) {
+  const angle = (i/12)*Math.PI*2 + Math.random()*0.3;
+  const dist = 28 + Math.random()*10;
+  const h = 5 + Math.random()*8;
+  const mGeo = new THREE.ConeGeometry(4+Math.random()*3, h, 6);
+  const mMat = new THREE.MeshStandardMaterial({ color: 0x1a1a3a, roughness: 0.8, flatShading: true });
+  const m = new THREE.Mesh(mGeo, mMat);
+  m.position.set(Math.cos(angle)*dist, h/2 - 1, Math.sin(angle)*dist);
+  m.castShadow = true;
+  scene.add(m);
+}
+
+// ===================== TREES =====================
+for (let i = 0; i < 30; i++) {
+  const x = (Math.random()-0.5)*50, z = (Math.random()-0.5)*50;
+  if (Math.abs(x) < 8 && Math.abs(z) < 8) continue;
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.2, 1+Math.random(), 4),
+    new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 1 })
+  );
+  trunk.position.set(x, 0.5, z);
+  const foliage = new THREE.Mesh(
+    new THREE.SphereGeometry(0.6+Math.random()*0.4, 5, 5),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.3+Math.random()*0.1, 0.5, 0.25+Math.random()*0.15), roughness: 0.8 })
+  );
+  foliage.position.set(x, 1.5+Math.random()*0.5, z);
+  scene.add(trunk); scene.add(foliage);
+}
+
+// ===================== PLAYER =====================
+const playerGroup = new THREE.Group();
+// Body
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.7, metalness: 0.1 });
+const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.6), bodyMat);
+body.position.y = 1.3;
+body.castShadow = true;
+playerGroup.add(body);
+
+// Head
+const headMat = new THREE.MeshStandardMaterial({ color: 0xf4a460, roughness: 0.6 });
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), headMat);
+head.position.y = 2.0;
+playerGroup.add(head);
+
+// Helmet
+const helmMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.5, metalness: 0.3 });
+const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 0.3, 8), helmMat);
+helm.position.y = 2.2;
+playerGroup.add(helm);
+const helmTop = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 0.3, 6), helmMat);
+helmTop.position.y = 2.4;
+playerGroup.add(helmTop);
+
+// Headlamp
+const lampMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xfbbf24, emissiveIntensity: 0.5 });
+const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), lampMat);
+lamp.position.set(0, 2.25, -0.4);
+playerGroup.add(lamp);
+
+// Cape / coat (red)
+const coatMat = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.8 });
+const coat = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 0.3), coatMat);
+coat.position.y = 1.0;
+playerGroup.add(coat);
+
+// Legs
+const legMat = new THREE.MeshStandardMaterial({ color: 0x2d1b00, roughness: 0.9 });
+const lLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.6, 6), legMat);
+lLeg.position.set(-0.2, 0.5, 0);
+playerGroup.add(lLeg);
+const rLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.6, 6), legMat);
+rLeg.position.set(0.2, 0.5, 0);
+playerGroup.add(rLeg);
+
+// Weapon (pickaxe)
+const weaponGroup = new THREE.Group();
+const handleMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.8 });
+const bladeMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.3, metalness: 0.7 });
+const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.2, 6), handleMat);
+handle.rotation.z = Math.PI/2;
+handle.position.x = 0.6;
+weaponGroup.add(handle);
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.05), bladeMat);
+blade.position.set(1.2, 0.0, 0);
+weaponGroup.add(blade);
+weaponGroup.position.set(0.5, 1.5, 0.3);
+playerGroup.add(weaponGroup);
+
+playerGroup.position.set(0, 0, 5);
+playerGroup.scale.set(0.8, 0.8, 0.8);
+scene.add(playerGroup);
+
+// Player glow aura (musou)
+const auraGeo = new THREE.SphereGeometry(1.2, 12, 12);
+const auraMat = new THREE.MeshBasicMaterial({
+  color: 0xfbbf24,
+  transparent: true,
+  opacity: 0.15,
+  depthWrite: false
+});
+const aura = new THREE.Mesh(auraGeo, auraMat);
+aura.position.y = 1.5;
+aura.visible = false;
+playerGroup.add(aura);
+
+// ===================== ENEMIES =====================
+class Enemy {
+  constructor(x, z, type) {
+    this.hp = type === '隊長' ? 60 : 25;
+    this.maxHp = this.hp;
+    this.atk = type === '隊長' ? 15 : 8;
+    this.type = type;
+    this.alive = true;
+    this.hitFlash = 0;
+
+    const group = new THREE.Group();
+    const c = type === '隊長' ? 0x8e44ad : 0xc0392b;
+    const bodyMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.5), bodyMat);
+    body.position.y = 1.0;
+    body.castShadow = true;
+    group.add(body);
+
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xf4a460, roughness: 0.6 });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 6, 6), headMat);
+    head.position.y = 1.55;
+    group.add(head);
+
+    const helmMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.5, metalness: 0.3 });
+    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.2, 6), helmMat);
+    helm.position.y = 1.7;
+    group.add(helm);
+
+    // Shield
+    const shieldMat = new THREE.MeshStandardMaterial({ color: 0xb8860b, roughness: 0.6, metalness: 0.3 });
+    const shield = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.05, 8), shieldMat);
+    shield.position.set(-0.4, 1.0, 0);
+    shield.rotation.x = Math.PI/2;
+    group.add(shield);
+
+    // Weapon
+    const weapMat = new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.5, roughness: 0.3 });
+    const weap = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.8, 4), weapMat);
+    weap.position.set(0.4, 0.8, 0);
+    weap.rotation.z = Math.PI/3;
+    group.add(weap);
+
+    group.position.set(x, 0, z);
+    const angle = Math.atan2(-z, -x);
+    group.rotation.y = angle;
+
+    this.group = group;
+    this.baseY = 0;
+    this.hpBar = null;
+    this.speed = 1.5 + Math.random() * 0.5;
+    scene.add(group);
+  }
+
+  takeDamage(dmg) {
+    if (!this.alive) return false;
+    this.hp -= dmg;
+    this.hitFlash = 10;
+    if (this.hp <= 0) {
+      this.alive = false;
+      this.group.visible = false;
+      return true; // killed
+    }
+    return false;
+  }
+
+  update(playerPos, dt) {
+    if (!this.alive) return;
+    const dx = playerPos.x - this.group.position.x;
+    const dz = playerPos.z - this.group.position.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist > 0.5) {
+      const move = this.speed * dt;
+      this.group.position.x += (dx/dist) * move;
+      this.group.position.z += (dz/dist) * move;
+      this.group.rotation.y = Math.atan2(dx, dz);
+    }
+    if (this.hitFlash > 0) {
+      this.hitFlash--;
+      this.group.children.forEach(c => {
+        if (c.material) c.material.emissive = new THREE.Color(0xffffff);
+        if (c.material) c.material.emissiveIntensity = this.hitFlash/10;
+      });
+    } else {
+      this.group.children.forEach(c => {
+        if (c.material) c.material.emissive = new THREE.Color(0x000000);
+        if (c.material) c.material.emissiveIntensity = 0;
+      });
+    }
+  }
+}
+
+// ===================== GAME STATE =====================
+let gameRunning = false;
+let enemies = [];
+let score = 0;
+let kills = 0;
+let combo = 0;
+let musouGauge = 0;
+const MAX_MUSOU = 100;
+let waveNum = 1;
+let playerHP = 100;
+const MAX_HP = 100;
+let atkCooldown = 0;
+let musouActive = false;
+let musouTimer = 0;
+let invTimer = 0;
+let enemySpawnTimer = 0;
+let gameTime = 0;
+
+// ===================== INPUT =====================
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if(['w','a','s','d','j','k',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// Touch
+let touchDir = { x: 0, y: 0 };
+let touchAtk = false;
+document.addEventListener('touchstart', e => {
+  for (const t of e.changedTouches) {
+    const x = t.clientX / window.innerWidth;
+    const y = t.clientY / window.innerHeight;
+    if (x < 0.4 && y > 0.5) { touchDir = { x: 0.5-x, y: 0 }; }
+    else if (x > 0.6 && y > 0.5) { touchAtk = true; }
+  }
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  touchAtk = false;
+  for (const t of e.changedTouches) {
+    const x = t.clientX / window.innerWidth;
+    const y = t.clientY / window.innerHeight;
+    if (x < 0.4 && y > 0.5) { touchDir = { x: Math.max(-1, Math.min(1, 0.5-x)*2), y: 0 }; }
+    else if (x > 0.6 && y > 0.5) { touchAtk = true; }
+  }
+}, { passive: true });
+document.addEventListener('touchend', e => { touchDir = { x: 0, y: 0 }; touchAtk = false; }, { passive: true });
+
+// UI Buttons
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('touchend', e => { e.preventDefault(); startGame(); });
+document.getElementById('retryBtn').addEventListener('click', () => { document.getElementById('gameover').style.display='none'; startGame(); });
+document.getElementById('againBtn').addEventListener('click', () => { document.getElementById('win').style.display='none'; startGame(); });
+
+function startGame() {
+  document.getElementById('title').style.display = 'none';
+  document.getElementById('gameover').style.display = 'none';
+  document.getElementById('win').style.display = 'none';
+  // Clean up old enemies
+  enemies.forEach(e => scene.remove(e.group));
+  enemies = [];
+  playerHP = MAX_HP;
+  score = 0; kills = 0; combo = 0; musouGauge = 0;
+  waveNum = 1; gameTime = 0; atkCooldown = 0;
+  musouActive = false; musouTimer = 0; invTimer = 0;
+  enemySpawnTimer = 0;
+  playerGroup.position.set(0, 0, 5);
+  playerGroup.rotation.y = 0;
+  weaponGroup.rotation.x = 0;
+  gameRunning = true;
+  spawnWave();
+}
+
+function spawnWave() {
+  const count = 5 + waveNum * 2;
+  for (let i = 0; i < Math.min(count, 15); i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.random() * 6;
+    const type = (i % 5 === 0 && waveNum > 2) ? '隊長' : '步兵';
+    enemies.push(new Enemy(
+      Math.cos(angle) * dist,
+      Math.sin(angle) * dist,
+      type
+    ));
+  }
+}
+
+// ===================== UPDATE =====================
+function update(dt) {
+  if (!gameRunning) return;
+  gameTime += dt;
+
+  // Player movement
+  let mx = 0, mz = 0;
+  if (keys['w'] || keys['arrowup']) mz = -1;
+  if (keys['s'] || keys['arrowdown']) mz = 1;
+  if (keys['a'] || keys['arrowleft']) mx = -1;
+  if (keys['d'] || keys['arrowright']) mx = 1;
+  if (Math.abs(touchDir.x) > 0.2) mx = touchDir.x;
+
+  const speed = 5 * dt;
+  if (mx !== 0 || mz !== 0) {
+    const angle = Math.atan2(mx, mz);
+    playerGroup.position.x += Math.sin(angle) * speed;
+    playerGroup.position.z += Math.cos(angle) * speed;
+    playerGroup.rotation.y = angle;
+    // Walking bob
+    weaponGroup.rotation.x = Math.sin(gameTime*10) * 0.1;
+  } else {
+    weaponGroup.rotation.x *= 0.9;
+  }
+  // Clamp to battlefield
+  playerGroup.position.x = Math.max(-12, Math.min(12, playerGroup.position.x));
+  playerGroup.position.z = Math.max(-12, Math.min(12, playerGroup.position.z));
+
+  // Invincibility
+  if (invTimer > 0) invTimer -= dt;
+
+  // Attack
+  if (atkCooldown > 0) atkCooldown -= dt;
+  const attacking = keys['j'] || keys[' '] || touchAtk;
+  if (attacking && atkCooldown <= 0 && !musouActive) {
+    atkCooldown = 0.3;
+    touchAtk = false;
+    // Weapon swing
+    weaponGroup.rotation.x = -Math.PI/3;
+    setTimeout(() => { weaponGroup.rotation.x = 0; }, 150);
+
+    // Hit check
+    for (let i = enemies.length-1; i >= 0; i--) {
+      const e = enemies[i];
+      if (!e.alive) continue;
+      const dx = playerGroup.position.x - e.group.position.x;
+      const dz = playerGroup.position.z - e.group.position.z;
+      const dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < 2.5) {
+        const dmg = 10 + combo * 0.5;
+        const crit = Math.random() < 0.15 ? 2 : 1;
+        const killed = e.takeDamage(dmg * crit);
+        combo++;
+        musouGauge = Math.min(MAX_MUSOU, musouGauge + 8);
+        score += Math.floor(dmg * crit);
+        if (killed) {
+          kills++;
+          score += 50;
+        }
+      }
+    }
+  }
+
+  // Musou activate
+  if ((keys['k'] || touchAtk) && musouGauge >= MAX_MUSOU && !musouActive && atkCooldown <= 0) {
+    musouActive = true;
+    musouTimer = 2.0;
+    musouGauge = 0;
+    touchAtk = false;
+    aura.visible = true;
+    // AoE damage
+    for (let i = enemies.length-1; i >= 0; i--) {
+      const e = enemies[i];
+      if (!e.alive) continue;
+      const dx = playerGroup.position.x - e.group.position.x;
+      const dz = playerGroup.position.z - e.group.position.z;
+      const dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < 6) {
+        e.takeDamage(50);
+        if (!e.alive) { kills++; score += 100; }
+      }
+    }
+  }
+
+  if (musouActive) {
+    musouTimer -= dt;
+    if (musouTimer <= 0) { musouActive = false; aura.visible = false; }
+  }
+
+  // Enemies
+  for (let i = enemies.length-1; i >= 0; i--) {
+    const e = enemies[i];
+    e.update(playerGroup.position, dt);
+    // Enemy attacks
+    if (e.alive) {
+      const dx = playerGroup.position.x - e.group.position.x;
+      const dz = playerGroup.position.z - e.group.position.z;
+      const dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < 1.5 && invTimer <= 0 && !musouActive) {
+        playerHP -= e.atk * 0.5;
+        invTimer = 0.5;
+        combo = 0;
+        if (playerHP <= 0) {
+          playerHP = 0;
+          gameRunning = false;
+          document.getElementById('goScore').textContent = `💰 分數: ${score}`;
+          document.getElementById('goStats').textContent = `💀 擊殺: ${kills} | 第${waveNum}波`;
+          document.getElementById('gameover').style.display = 'flex';
+        }
+      }
+    }
+  }
+
+  // Wave spawning
+  enemySpawnTimer -= dt;
+  if (enemySpawnTimer <= 0 && enemies.filter(e=>e.alive).length < 8 + waveNum) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 10 + Math.random() * 4;
+    enemies.push(new Enemy(
+      Math.cos(angle) * dist,
+      Math.sin(angle) * dist,
+      waveNum > 3 && Math.random()<0.2 ? '隊長' : '步兵'
+    ));
+    enemySpawnTimer = 1 + Math.random() * 2;
+  }
+
+  // Wave progress
+  const killsNeeded = 8 + waveNum * 4;
+  if (kills >= killsNeeded) {
+    waveNum++;
+    combo += 3;
+    score += 200;
+    if (waveNum > 8) {
+      gameRunning = false;
+      document.getElementById('winScore').textContent = `💰 總分: ${score} | 💀 擊殺: ${kills}`;
+      document.getElementById('win').style.display = 'flex';
+    }
+  }
+
+  // Camera follow
+  camera.position.x = playerGroup.position.x * 0.7;
+  camera.position.z = playerGroup.position.z * 0.7 + 18;
+  camera.position.y = 12 + Math.sin(gameTime*0.3) * 0.5;
+  camera.lookAt(playerGroup.position.x, 0, playerGroup.position.z);
+
+  // Update HUD
+  updateHUD();
+}
+
+function updateHUD() {
+  const hpFill = document.getElementById('hpFill');
+  const musouFill = document.getElementById('musouFill');
+  const scoreEl = document.getElementById('scoreVal');
+  const comboEl = document.getElementById('comboVal');
+  const waveEl = document.getElementById('waveVal');
+  if (hpFill) hpFill.style.width = (playerHP/MAX_HP*100)+'%';
+  if (musouFill) musouFill.style.width = (musouGauge/MAX_MUSOU*100)+'%';
+  if (scoreEl) scoreEl.textContent = score;
+  if (comboEl) comboEl.textContent = combo >= 3 ? `🔥${combo}` : '';
+  if (waveEl) waveEl.textContent = `第${waveNum}波`;
+}
+
+// HUD injection
+const hudHTML = `
+<div id="hud" style="position:fixed;top:10px;left:0;width:100%;display:flex;justify-content:space-between;padding:0 10px;z-index:15;pointer-events:none">
+  <div>
+    <div class="hud-bar" style="width:120px">❤️ HP<div class="fill" id="hpFill" style="width:100%;background:#4ade80"></div></div>
+    <div class="hud-bar" style="width:120px;margin-top:3px">⚡ 無雙<div class="fill" id="musouFill" style="width:0%;background:#fbbf24"></div></div>
+  </div>
+  <div style="text-align:right">
+    <div class="hud-bar" style="min-width:60px">💰 <span id="scoreVal">0</span></div>
+    <div class="hud-bar" style="min-width:60px;margin-top:3px" id="comboVal"></div>
+    <div class="hud-bar" style="min-width:60px;margin-top:3px;color:#38bdf8" id="waveVal">第1波</div>
+  </div>
+</div>
+<div id="controls" style="position:fixed;bottom:20px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:20;pointer-events:none">
+  <div class="btn-group">
+    <div class="ctrl-btn" style="pointer-events:auto" id="btnLeft">◀</div>
+    <div class="ctrl-btn" style="pointer-events:auto;background:rgba(255,255,255,0.08)" id="btnRight">▶</div>
+  </div>
+  <div class="btn-group">
+    <div class="ctrl-btn atk" style="pointer-events:auto" id="btnAtk">⚔<br><span style="font-size:9px">攻擊</span></div>
+    <div class="ctrl-btn musou" style="pointer-events:auto" id="btnMusou" style="display:none">🔥<br><span style="font-size:9px">無雙</span></div>
+  </div>
+</div>`;
+const div = document.createElement('div');
+div.innerHTML = hudHTML;
+document.body.appendChild(div);
+
+// Touch buttons
+document.getElementById('btnLeft').addEventListener('touchstart', e=>{e.preventDefault();touchDir.x=-1;},{passive:false});
+document.getElementById('btnLeft').addEventListener('touchend', e=>{e.preventDefault();touchDir.x=0;},{passive:false});
+document.getElementById('btnRight').addEventListener('touchstart', e=>{e.preventDefault();touchDir.x=1;},{passive:false});
+document.getElementById('btnRight').addEventListener('touchend', e=>{e.preventDefault();touchDir.x=0;},{passive:false});
+document.getElementById('btnAtk').addEventListener('touchstart', e=>{e.preventDefault();touchAtk=true;},{passive:false});
+document.getElementById('btnAtk').addEventListener('touchend', e=>{e.preventDefault();touchAtk=false;},{passive:false});
+
+// ===================== RESIZE =====================
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===================== GAME LOOP =====================
+let lastTime = 0;
+function animate(time) {
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+  update(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+// Spawn initial enemies for background
+for (let i = 0; i < 20; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 15 + Math.random() * 20;
+  const e = new Enemy(Math.cos(angle)*dist, Math.sin(angle)*dist, '步兵');
+  e.speed = 0;
+}
+
+animate(0);
+</script>
+</body>
+</html>
