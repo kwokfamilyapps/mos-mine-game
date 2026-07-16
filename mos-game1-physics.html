@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>礦車物理 Sim V1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;overflow:hidden;touch-action:none;font-family:sans-serif;color:#e2e8f0}
+canvas{display:block;width:100vw;height:100dvh}
+#hud{position:fixed;top:10px;left:10px;z-index:15;pointer-events:none}
+#hud>div{background:rgba(0,0,0,0.7);border-radius:8px;padding:6px 12px;margin-bottom:4px;font-size:13px}
+#hud .gold{color:#ffd700}
+#hud .red{color:#f87171}
+#hud .blue{color:#38bdf8}
+.bar-bg{width:120px;height:6px;background:#1e2a3a;border-radius:3px;margin-top:3px}
+.bar-fill{height:6px;border-radius:3px;transition:width 0.1s}
+#info{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);padding:10px 20px;border-radius:8px;text-align:center;font-size:14px;max-width:85vw;z-index:15;pointer-events:none}
+#title{position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a0e1a,#1a1f2e)}
+#title h1{color:#fbbf24;font-size:28px}
+#title .sub{color:#94a3b8;font-size:13px;margin:10px 0 25px;text-align:center}
+#title .btn{padding:14px 50px;border-radius:8px;border:1px solid #4ade80;background:#14532d;color:#4ade80;font-size:18px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="title"><h1>⛏️ 礦車物理 Sim</h1><div class="sub">240ML 載礦落碼頭 · 控制速度與煞車</div><a class="btn" id="startBtn">🚂 出發！</a></div>
+<div id="hud">
+  <div>📍 <span id="loc">240ML 礦洞</span></div>
+  <div class="gold">🪨 載重: <span id="loadVal">0</span>kg</div>
+  <div class="blue">📏 距離: <span id="distVal">0</span>m</div>
+  <div>⚡ 速度: <span id="spdVal">0</span> km/h <span class="red" id="warn" style="display:none">⚠️ 過快！</span></div>
+  <div>🛞 煞車: <span id="brakeVal">100</span>%</div>
+  <div class="bar-bg"><div class="bar-fill" id="brakeBar" style="width:100%;background:#4ade80"></div></div>
+</div>
+<div id="info">🛞 按住下方煞車掣控制速度 · 到碼頭減速停車</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x87ceeb); scene.fog=new THREE.Fog(0x87ceeb,60,150);
+const camera=new THREE.PerspectiveCamera(65,w=window.innerWidth,h=window.innerHeight,0.1,200);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(w,h); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
+document.body.prepend(renderer.domElement);
+
+const sun=new THREE.DirectionalLight(0xffeecc,2); sun.position.set(30,40,20);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=1; sun.shadow.camera.far=100;
+sun.shadow.camera.left=-30; sun.shadow.camera.right=30;
+sun.shadow.camera.top=30; sun.shadow.camera.bottom=-30;
+scene.add(sun); scene.add(new THREE.AmbientLight(0x404060,0.4)); scene.add(new THREE.HemisphereLight(0x87ceeb,0x362d1a,0.4));
+
+// Terrain
+const g=new THREE.PlaneGeometry(200,200,50,50); const p=g.attributes.position.array;
+for(let i=0;i<p.length;i+=3){const x=p[i],y=p[i+1];p[i+2]=Math.sin(x*0.06)*Math.cos(y*0.05)*2+Math.sin(x*0.15+y*0.1)*0.8+Math.max(0,(20-Math.sqrt(x*x+y*y))/20*8)}
+g.computeVertexNormals(); const t=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x4a7a3a,roughness:0.9,side:THREE.DoubleSide}));
+t.rotation.x=-Math.PI/2; t.receiveShadow=true; scene.add(t);
+
+// Mountains
+for(let i=0;i<20;i++){const a=Math.random()*Math.PI*2,d=30+Math.random()*30,h=5+Math.random()*12;
+const m=new THREE.Mesh(new THREE.ConeGeometry(4+Math.random()*5,h,6),new THREE.MeshStandardMaterial({color:0x2a2a4a,flatShading:true}));
+m.position.set(Math.cos(a)*d,h/2-1,Math.sin(a)*d);m.castShadow=true;scene.add(m)}
+
+// Track - winding downhill
+const points=[]; const seg=200;
+for(let i=0;i<=seg;i++){const t=i/seg;
+const x=Math.sin(t*6)*(8+t*3)+Math.sin(t*2)*2;
+const z=t*80-25;
+let y; if(t<0.2)y=10-t/0.2*4; else if(t<0.5)y=6-(t-0.2)/0.3*3+Math.sin(t*8)*0.5; else if(t<0.8)y=3-(t-0.5)/0.3*1.5; else y=1.5+Math.sin(t*4)*0.2;
+points.push(new THREE.Vector3(x,y,z))}
+const curve=new THREE.CatmullRomCurve3(points);
+const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,seg,0.12,5,false),new THREE.MeshStandardMaterial({color:0x8B6914,roughness:0.5,metalness:0.3}));
+tube.castShadow=true; scene.add(tube);
+
+// Rails
+const rp=[]; for(let i=0;i<=seg;i++){const t=i/seg,pt=curve.getPointAt(t),tn=curve.getTangentAt(t),n=new THREE.Vector3(0,1,0),bn=new THREE.Vector3().crossVectors(tn,n).normalize();
+const w=0.5;const p1=pt.clone().add(bn.clone().multiplyScalar(w/2)),p2=pt.clone().add(bn.clone().multiplyScalar(-w/2));
+rp.push(p1.x,p1.y,p1.z,p2.x,p2.y,p2.z)}
+const rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
+scene.add(new THREE.LineSegments(rg,new THREE.LineBasicMaterial({color:0x6b4f30})));
+
+// Trees
+for(let i=0;i<50;i++){const x=(Math.random()-0.5)*80,z=(Math.random()-0.5)*80+10;
+if(Math.abs(x)<4&&z<20)continue;
+const tr=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,0.6,4),new THREE.MeshStandardMaterial({color:0x4a3520}));
+tr.position.set(x,0.3,z); scene.add(tr);
+const f=new THREE.Mesh(new THREE.SphereGeometry(0.3+Math.random()*0.3,4,4),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(0.3+Math.random()*0.1,0.4,0.2)}));
+f.position.set(x,0.8+Math.random()*0.4,z); scene.add(f)}
+
+// Buildings
+function bld(x,z,w,h,d,c){const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:c||0xd4c4a0,roughness:0.7}));
+b.position.set(x,h/2,z);b.castShadow=true;scene.add(b); return b}
+const bps=[[3,15],[6,22],[-4,30],[7,38],[-5,48],[4,55],[-7,62],[6,70]];
+for(const [x,z] of bps){const w=1+Math.random(),h=1+Math.random()*1.2;bld(x,z,w,h,1+Math.random(),[0xd4a373,0xc49a6c,0xddd4b0][Math.floor(Math.random()*3)])}
+
+// Mine entrance
+const me=new THREE.Mesh(new THREE.BoxGeometry(4,3.5,1.5),new THREE.MeshStandardMaterial({color:0x4a4a4a,roughness:0.8}));
+me.position.set(points[0].x,1.75,points[0].z-1); scene.add(me);
+const mt=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),new THREE.MeshStandardMaterial({color:0x0a0a0a,side:THREE.DoubleSide}));
+mt.position.set(points[0].x,1.5,points[0].z+0.5); scene.add(mt);
+
+// Church
+function church(x,z){const wm=new THREE.MeshStandardMaterial({color:0xf0e8d8,roughness:0.6});
+const b=new THREE.Mesh(new THREE.BoxGeometry(4,3,6),wm); b.position.set(x,1.5,z);b.castShadow=true;scene.add(b);
+const r=new THREE.Mesh(new THREE.BoxGeometry(4.2,0.2,6.2),new THREE.MeshStandardMaterial({color:0x3a6a3a}));r.position.set(x,3.1,z);scene.add(r);
+const tw=new THREE.Mesh(new THREE.BoxGeometry(1.2,4.5,1.2),wm);tw.position.set(x+2,2.25,z-1);scene.add(tw);
+const sp=new THREE.Mesh(new THREE.ConeGeometry(0.5,1.2,4),new THREE.MeshStandardMaterial({color:0xcc3333}));sp.position.set(x+2,5.1,z-1);scene.add(sp);
+const cv=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.35,0.06),new THREE.MeshStandardMaterial({color:0xff0000}));cv.position.set(x+2,5.5,z-1+0.3);scene.add(cv);
+const ch=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.06,0.06),new THREE.MeshStandardMaterial({color:0xff0000}));ch.position.set(x+2,5.5,z-1+0.3);scene.add(ch)}
+church(-7,50);
+
+// MINE CART
+const cart=new THREE.Group();
+const cm=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.4,1.0),new THREE.MeshStandardMaterial({color:0x6b4f30,roughness:0.6,metalness:0.4}));
+cm.position.y=0.2; cm.castShadow=true; cart.add(cm);
+// Ore
+const ore=new THREE.Mesh(new THREE.SphereGeometry(0.25,5,5),new THREE.MeshStandardMaterial({color:0x555566,roughness:0.8,metalness:0.2}));
+ore.position.set(0,0.5,0.1);ore.scale.set(1.5,0.5,1);cart.add(ore);
+// Wheels
+for(let s of[-1,1])for(let w of[-0.4,0.4]){const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.06,6),new THREE.MeshStandardMaterial({color:0x333,roughness:0.8}));
+wh.rotation.x=Math.PI/2;wh.position.set(s*0.45,0.05,w);cart.add(wh)}
+// Headlamp
+const hl=new THREE.Mesh(new THREE.SphereGeometry(0.06,6,6),new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xfbbf24,emissiveIntensity:1}));
+hl.position.set(0,0.25,-0.55);cart.add(hl);
+cart.scale.set(0.7,0.7,0.7); scene.add(cart);
+
+// GAME
+let running=false,progress=0,speed=0,brake=100,load=0,dist=0,gameTime=0;
+const MAX_SPEED=0.012; const MAX_BRAKE=100; const LOAD_MAX=500;
+
+// Input
+const keys={}; document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; if(e.key===' ')e.preventDefault()});
+document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+let touchBrake=false;
+document.addEventListener('touchstart',e=>{for(const t of e.changedTouches){const x=t.clientX/window.innerWidth;if(x>0.4&&x<0.6&&t.clientY/window.innerHeight>0.7)touchBrake=true}},{passive:true});
+document.addEventListener('touchend',e=>{touchBrake=false},{passive:true});
+document.getElementById('startBtn').addEventListener('click',()=>{
+document.getElementById('title').style.display='none';running=true;progress=0;speed=0;brake=100;load=0;dist=0;gameTime=0;
+cart.position.copy(points[0]);cart.position.y+=0.3});
+
+// Sections
+const secs=[{t:0,name:'240ML 礦洞'},{t:0.15,name:'192ML 坑道'},{t:0.3,name:'144ML 斜路'},{t:0.45,name:'露天礦區'},{t:0.6,name:'礦村'},{t:0.75,name:'選礦廠'},{t:0.9,name:'碼頭區'}];
+
+function update(dt){
+ if(!running)return; gameTime+=dt;
+ // Brake control
+ const braking=keys[' ']||touchBrake;
+ if(braking)brake=Math.max(0,brake-dt*40); else brake=Math.min(100,brake+dt*20);
+ // Speed physics
+ const grav=0.003; const trackSlope=progress<0.3?0.08:progress<0.6?0.04:0.01;
+ const accel=grav*trackSlope*(1+load/LOAD_MAX*0.3)-brake/100*0.01;
+ speed=Math.max(0,Math.min(MAX_SPEED,speed+accel*dt));
+ if(speed<0.0001&&progress<0.01)speed=0.002;
+ progress+=speed*dt*2; dist+=speed*dt*2*100;
+ if(progress>=1){progress=1;running=false;
+   document.getElementById('info').textContent=load>300?'✅ 安全抵達！成功運送'+Math.floor(load)+'kg 鐵礦石':'⚠️ 載重不足，下次裝多啲礦先出發'}
+
+ const t=progress; const pt=curve.getPointAt(Math.min(t,0.999));
+ const tn=curve.getTangentAt(Math.min(t,0.999));
+ cart.position.copy(pt);cart.position.y+=0.3;
+ const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),tn.clone().normalize());
+ cart.quaternion.copy(q);
+ cart.position.y+=Math.sin(gameTime*20)*0.015*speed*100;
+
+ // Camera
+ const cp=pt.clone().add(new THREE.Vector3(0,1.2,-2.5).applyQuaternion(q));
+ camera.position.copy(cp);
+ const look=pt.clone().add(tn.clone().multiplyScalar(2));
+ camera.lookAt(look);
+
+ // Wheel spin
+ cart.children.forEach(c=>{if(c.geometry&&c.geometry.type==='CylinderGeometry'&&c.position.z!==0)c.rotation.z+=speed*15});
+
+ // HUD
+ const s=secs.filter(x=>t>=x.t).pop();
+ document.getElementById('loc').textContent=s?s.name:'碼頭';
+ document.getElementById('loadVal').textContent=Math.floor(load);
+ document.getElementById('distVal').textContent=Math.floor(dist);
+ document.getElementById('spdVal').textContent=Math.floor(speed/MAX_SPEED*80);
+ document.getElementById('brakeVal').textContent=Math.floor(brake);
+ document.getElementById('brakeBar').style.width=brake+'%';
+ document.getElementById('brakeBar').style.background=brake>60?'#4ade80':brake>30?'#fbbf24':'#f87171';
+ document.getElementById('warn').style.display=speed>MAX_SPEED*0.8?'inline':'none';
+
+ // Loading at start
+ if(t<0.05)load=Math.min(LOAD_MAX,load+dt*200);
+
+ if(progress>=1){running=false;setTimeout(()=>{progress=0;speed=0;brake=100;load=0;dist=0;running=true;document.getElementById('info').textContent='🛞 按住下方煞車掣控制速度 · 到碼頭減速停車';cart.position.copy(points[0]);cart.position.y+=0.3},3000)}
+}
+
+window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight)});
+let lt=0;
+function animate(t){const dt=Math.min((t-lt)/1000,0.05);lt=t;update(dt);renderer.render(scene,camera);requestAnimationFrame(animate)}
+// Place cart at start
+cart.position.copy(points[0]);cart.position.y+=0.3;
+animate(0);
+</script>
+</body>
+</html>
