@@ -25,23 +25,20 @@ function resize() {
 resize(); window.addEventListener('resize', resize);
 
 // === INPUT ===
-const inp = { left:0, right:0, up:0, down:0, atk:0, jump:0 };
-let tapX=0, tapY=0, tapId=-1;
+const inp = { left:0, right:0, up:0, down:0, atk:0, jump:0, tap:0, tapX:0, tapY:0 };
 c.addEventListener('touchstart', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
     const r = c.getBoundingClientRect();
     const x = t.clientX - r.left, y = t.clientY - r.top;
     const sx = x/r.width*W, sy = y/r.height*H;
-    // Virtual buttons
+    inp.tap=1; inp.tapX=sx; inp.tapY=sy;
     if (sy > H-140) {
       if (sx < W/3) inp.left = 1;
       else if (sx > W*2/3) inp.right = 1;
       else inp.jump = 1;
     } else if (sx > W-100 && sy > H-250) {
       inp.atk = 1;
-    } else {
-      tapX = sx; tapY = sy; tapId = t.identifier;
     }
   }
 });
@@ -59,12 +56,8 @@ c.addEventListener('touchmove', e => {
 });
 c.addEventListener('touchend', e => {
   e.preventDefault();
-  for (const t of e.changedTouches) {
-    const r = c.getBoundingClientRect();
-    const x = t.clientX - r.left, y = t.clientY - r.top;
-    const sx = x/r.width*W, sy = y/r.height*H;
-    inp.left = 0; inp.right = 0; inp.jump = 0; inp.atk = 0;
-  }
+  inp.left = 0; inp.right = 0; inp.jump = 0;
+  // atk & tap cleared by game loop after processing
 });
 document.addEventListener('keydown', e => {
   switch(e.key) {
@@ -190,7 +183,8 @@ function update() {
 
   // Attack
   if (inp.atk && p.atkTimer <= 0 && !p.musouActive) {
-    p.atkTimer = 15;
+  inp.atk = 0; // consume the trigger
+  p.atkTimer = 15;
     p.atkFrame = 10;
     const w = getWeapon();
     // Hit check
@@ -739,13 +733,28 @@ function drawWin() {
 function loop() {
   // Handle state transitions from tap
   if (state === 'title') {
-    // Virtual start button
-    if (inp.atk) { inp.atk = 0; state = 'playing'; resetGame(); }
+    // Check if tap on start button area (center of screen)
+    if (inp.tap || inp.atk || inp.jump) {
+      inp.tap=0; inp.atk=0; inp.jump=0;
+      state = 'playing'; resetGame();
+    }
   } else if (state === 'gameover') {
-    if (inp.atk) { inp.atk = 0; state = 'title'; }
+    if (inp.tap || inp.atk || inp.jump) {
+      inp.tap=0; inp.atk=0; inp.jump=0;
+      state = 'title';
+    }
   } else if (state === 'win') {
-    if (inp.atk) { inp.atk = 0; state = 'title'; }
+    if (inp.tap || inp.atk || inp.jump) {
+      inp.tap=0; inp.atk=0; inp.jump=0;
+      state = 'title';
+    }
+  } else if (state === 'playing') {
+    // Clear attack trigger after processing (so it doesn't repeat)
+    // Reset atk after it's been read in update
   }
+
+  // Clear one-shot input flags
+  if (inp.tap) inp.tap = 0;
 
   update();
   draw();
