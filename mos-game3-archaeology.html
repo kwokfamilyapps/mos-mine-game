@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>礦場考古解謎 V1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:sans-serif;touch-action:none;overflow:hidden;height:100dvh}
+#game{display:flex;flex-direction:column;height:100dvh;max-width:500px;margin:0 auto}
+#title{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:linear-gradient(180deg,#0a0e1a,#1a1f2e);padding:20px;text-align:center}
+#title h1{color:#fbbf24;font-size:26px;margin-bottom:8px}
+#title .sub{color:#94a3b8;font-size:13px;margin-bottom:25px;line-height:1.6}
+#title .btn{padding:12px 50px;border-radius:8px;border:1px solid #d4a843;background:#2a1f0a;color:#d4a843;font-size:18px;cursor:pointer}
+#scene{flex:1;background:#2a1f0a;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#scene-img{width:100%;height:100%;object-fit:cover;opacity:0.6}
+#dig-area{position:absolute;width:100%;height:100%;top:0;left:0}
+.cell{position:absolute;border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all 0.3s;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold}
+.cell:hover{background:rgba(255,255,200,0.1);border-color:rgba(255,255,200,0.3)}
+.cell.done{background:rgba(0,0,0,0.4);border-color:transparent;cursor:default}
+.cell.found{background:rgba(255,215,0,0.15);border-color:#ffd700;animation:pulse 1s}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+#bottom{background:#141b2d;padding:12px;border-top:1px solid #1e2a3a}
+#found-list{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;min-height:30px}
+.found-item{background:#2a1f0a;border:1px solid #d4a843;border-radius:6px;padding:4px 10px;font-size:12px;color:#d4a843}
+#hud-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+#hud-row .gold{color:#ffd700}
+#hud-row .blue{color:#38bdf8}
+#info-box{background:#0f1525;border-left:3px solid #38bdf8;padding:10px;margin-bottom:8px;border-radius:0 6px 6px 0;font-size:12px;min-height:50px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="title">
+  <h1>🔍 礦場考古解謎</h1>
+  <div class="sub">挖掘馬鞍山鐵礦場遺址<br>發掘歷史文物 · 拼湊礦場故事</div>
+  <a class="btn" id="startBtn">⛏️ 開始發掘</a>
+</div>
+<div id="scene" style="display:none">
+  <canvas id="digCanvas"></canvas>
+</div>
+<div id="bottom" style="display:none">
+  <div id="info-box">👆 㩒方格發掘，尋找馬鞍山鐵礦文物</div>
+  <div id="found-list"></div>
+  <div id="hud-row">
+    <span class="gold">🏺 文物: <span id="foundCount">0</span>/<span id="totalCount">8</span></span>
+    <span class="blue">⛏️ 挖掘次數: <span id="digs">0</span></span>
+  </div>
+</div>
+</div>
+<script>
+const artifacts=[
+ {id:1,name:'礦工名牌',desc:'當年礦工用嘅翻牌制度名牌，紅色入礦、綠色出礦',emoji:'🪪',found:false},
+ {id:2,name:'鐵礦石樣本',desc:'馬鞍山鐵礦場開採嘅磁鐵礦，含鐵量約50%',emoji:'🪨',found:false},
+ {id:3,name:'礦燈',desc:'礦工戴喺頭盔上嘅電石燈，礦洞入面唯一光源',emoji:'💡',found:false},
+ {id:4,name:'恩光堂鐘樓部件',desc:'恩光堂鐘樓嘅十字架裝飾，教堂嘅標誌',emoji:'⛪',found:false},
+ {id:5,name:'選礦廠齒輪',desc:'選礦七步流程嘅機器齒輪，碎礦機嘅一部分',emoji:'⚙️',found:false},
+ {id:6,name:'礦車輪',desc:'運礦車嘅鐵輪，由240ML沿路軌運礦落碼頭',emoji:'🚂',found:false},
+ {id:7,name:'天光墟秤砣',desc:'天光墟檔口用嘅舊式秤砣，礦工妻子買餸必用',emoji:'⚖️',found:false},
+ {id:8,name:'「大寶山號」模型',desc:'運載鐵礦石去日本嘅貨輪模型，碼頭舊址喺今日耀安邨',emoji:'🚢',found:false},
+];
+let found=0,totalDigs=0,gameRunning=false;
+const canvas=document.getElementById('digCanvas');
+const ctx=canvas.getContext('2d');
+
+function resizeCanvas(){
+ canvas.width=canvas.parentElement.clientWidth*2;
+ canvas.height=canvas.parentElement.clientHeight*2;
+ canvas.style.width='100%';canvas.style.height='100%';
+}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+
+const gridSize=6;
+let cells=[];
+
+function initGrid(){
+ resizeCanvas();
+ cells=[];
+ const w=canvas.width/2,h=canvas.height/2;
+ const cw=w/gridSize,ch=h/gridSize;
+ const usedPositions=new Set();
+ 
+ // Place artifacts randomly
+ for(let a of artifacts){
+  let pos;
+  do{pos=Math.floor(Math.random()*gridSize*gridSize)}while(usedPositions.has(pos));
+  usedPositions.add(pos);
+  a.found=false;
+  a.gridPos=pos;
+ }
+ 
+ cells=[];
+ for(let i=0;i<gridSize*gridSize;i++){
+  const row=Math.floor(i/gridSize),col=i%gridSize;
+  const art=artifacts.find(a=>a.gridPos===i);
+  cells.push({
+   x:col*cw,y:row*ch,w:cw,h:ch,
+   dug:false,artifact:art||null,
+   row,col
+  });
+ }
+ drawGrid();
+ found=0;totalDigs=0;
+ document.getElementById('foundCount').textContent='0';
+ document.getElementById('foundList').innerHTML='';
+ document.getElementById('info-box').textContent='👆 㩒方格發掘，尋找馬鞍山鐵礦文物';
+}
+
+function drawGrid(){
+ const w=canvas.width,h=canvas.height;
+ const cw=w/gridSize,ch=h/gridSize;
+ ctx.clearRect(0,0,w,h);
+ 
+ // Background
+ ctx.fillStyle='#2a1f0a';
+ ctx.fillRect(0,0,w,h);
+ 
+ // Grid pattern
+ for(let i=0;i<gridSize*gridSize;i++){
+  const c=cells[i];
+  const x=c.x*2,y=c.y*2,wi=c.w*2,hi=c.h*2;
+  ctx.strokeStyle='rgba(255,255,255,0.06)';
+  ctx.lineWidth=1;
+  ctx.strokeRect(x,y,wi,hi);
+  
+  if(c.dug){
+   if(c.artifact){
+    // Found!
+    ctx.fillStyle='rgba(255,215,0,0.1)';
+    ctx.fillRect(x+2,y+2,wi-4,hi-4);
+    ctx.strokeStyle='#ffd700';
+    ctx.lineWidth=2;
+    ctx.strokeRect(x+2,y+2,wi-4,hi-4);
+    ctx.fillStyle='#ffd700';
+    ctx.font=`${Math.min(wi/2,24)}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(c.artifact.emoji,x+wi/2,y+hi/2-5);
+    ctx.fillStyle='#d4a843';
+    ctx.font='9px sans-serif';
+    ctx.fillText(c.artifact.name,x+wi/2,y+hi/2+10);
+   }else{
+    // Empty dug
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.fillRect(x+2,y+2,wi-4,hi-4);
+    ctx.fillStyle='#475569';
+    ctx.font='16px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('...',x+wi/2,y+hi/2);
+   }
+  }else{
+   // Undug - dirt texture
+   ctx.fillStyle='rgba(60,40,20,0.3)';
+   ctx.fillRect(x+2,y+2,wi-4,hi-4);
+   // Question mark hint
+   ctx.fillStyle='rgba(255,255,255,0.06)';
+   ctx.font='20px sans-serif';
+   ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText('?',x+wi/2,y+hi/2);
+  }
+ }
+ 
+ // Border
+ ctx.strokeStyle='rgba(255,255,255,0.1)';
+ ctx.lineWidth=2;
+ ctx.strokeRect(0,0,w,h);
+}
+
+canvas.addEventListener('click',e=>{
+ if(!gameRunning)return;
+ const rect=canvas.getBoundingClientRect();
+ const x=(e.clientX-rect.left)/rect.width*canvas.width/2;
+ const y=(e.clientY-rect.top)/rect.height*canvas.height/2;
+ const col=Math.floor(x/(canvas.width/2/gridSize));
+ const row=Math.floor(y/(canvas.height/2/gridSize));
+ if(col<0||col>=gridSize||row<0||row>=gridSize)return;
+ const idx=row*gridSize+col;
+ const c=cells[idx];
+ if(c.dug)return;
+ 
+ c.dug=true;
+ totalDigs++;
+ document.getElementById('digs').textContent=totalDigs;
+ 
+ if(c.artifact){
+  c.artifact.found=true;
+  found++;
+  document.getElementById('foundCount').textContent=found;
+  document.getElementById('info-box').innerHTML=`<strong>${c.artifact.emoji} ${c.artifact.name}</strong><br>${c.artifact.desc}`;
+  const el=document.createElement('span');
+  el.className='found-item';
+  el.textContent=`${c.artifact.emoji} ${c.artifact.name}`;
+  document.getElementById('found-list').appendChild(el);
+  if(found>=artifacts.length){
+   document.getElementById('info-box').innerHTML='🎉 全部文物發掘完成！你重現咗馬鞍山鐵礦場嘅歷史！';
+   gameRunning=false;
+  }
+ }else{
+  document.getElementById('info-box').textContent='❌ 呢度冇文物，試下第個位置';
+ }
+ drawGrid();
+});
+
+document.getElementById('startBtn').addEventListener('click',()=>{
+ document.getElementById('title').style.display='none';
+ document.getElementById('scene').style.display='flex';
+ document.getElementById('bottom').style.display='block';
+ document.getElementById('totalCount').textContent=artifacts.length;
+ gameRunning=true;
+ initGrid();
+});
+</script>
+</body>
+</html>
