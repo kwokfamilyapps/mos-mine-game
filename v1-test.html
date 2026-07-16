@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>馬鞍山鐵礦場瘋狂礦車大冒險 V1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none}
+body{background:#0a0e1a;display:flex;justify-content:center;align-items:center;min-height:100dvh;font-family:"Segoe UI",sans-serif;touch-action:none;overflow:hidden}
+#gameCanvas{border:2px solid #1e2a3a;border-radius:8px;background:#1a1f2e;max-width:100vw;max-height:100dvh;image-rendering:pixelated}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ============================================================
+// 馬鞍山鐵礦場瘋狂礦車大冒險 — V1 測試版
+// Canvas pixel-style game, no external deps
+// ============================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- Canvas sizing ---
+const W = 480, H = 720;
+canvas.width = W; canvas.height = H;
+
+// --- Scale for mobile ---
+function resizeCanvas() {
+  const maxW = window.innerWidth - 4;
+  const maxH = window.innerHeight - 4;
+  const scale = Math.min(maxW / W, maxH / H);
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ============================================================
+// GAME STATE
+// ============================================================
+const STATE = {
+  MENU: 0,       // Title screen
+  SELECT: 1,     // Character select
+  PLAYING: 2,    // Gameplay
+  GAMEOVER: 3,   // Game over
+  WIN: 4         // Level complete
+};
+let state = STATE.MENU;
+let score = 0;
+let highScore = parseInt(localStorage.getItem('mosHighScore') || '0');
+let selectedChar = 0;
+let gameTime = 0;
+let health = 3;
+let maxHealth = 3;
+
+// ============================================================
+// CHARACTERS (8 types)
+// ============================================================
+const CHARS = [
+  { name:'👷 礦工',     desc:'體力型，翻名牌入礦',  hp:4, speed:1.0, color:'#d4a373', size:36 },
+  { name:'👩 礦工妻子', desc:'社交型，天光墟買餸',  hp:3, speed:1.1, color:'#e5989b', size:34 },
+  { name:'👦 礦工小孩', desc:'好奇心型，返學+士多',hp:2, speed:1.3, color:'#ffb5a7', size:28 },
+  { name:'👧 礦工女孩', desc:'好奇心型，返學+士多',hp:2, speed:1.3, color:'#fcd5ce', size:28 },
+  { name:'👩‍🏫 教會老師', desc:'教育型，管教學生',  hp:3, speed:1.0, color:'#b7b7a4', size:34 },
+  { name:'🙏 牧師',     desc:'心靈型，探訪礦工',  hp:3, speed:0.9, color:'#a5a58d', size:36 },
+  { name:'⛪ 神父',     desc:'傳教型，主持彌撒',  hp:3, speed:0.9, color:'#6d6875', size:36 },
+  { name:'🧕 修女',     desc:'服務型，診所幫手',  hp:4, speed:0.8, color:'#b5838d', size:34 }
+];
+
+// ============================================================
+// PLAYER
+// ============================================================
+let player = {
+  x: 0, y: 0, w: 28, h: 36,
+  vy: 0, vx: 0,
+  onGround: false,
+  jumping: false,
+  slideTimer: 0,
+  invincible: 0,
+  combo: 0
+};
+
+// ============================================================
+// OBSTACLES
+// ============================================================
+let obstacles = [];
+let coinPickups = [];
+let particles = [];
+let bgTiles = [];
+let scrollSpeed = 3;
+let baseScrollSpeed = 3;
+let distance = 0;
+let section = 0; // 0=outside, 1=洞內, 2=坑道
+
+// ============================================================
+// INPUT (touch + keyboard)
+// ============================================================
+const input = { left:false, right:false, up:false, down:false, tap:false };
+let touchStartX = 0, touchStartY = 0;
+let touchActive = false;
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  touchStartX = t.clientX; touchStartY = t.clientY;
+  touchActive = true;
+  input.tap = true;
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!touchActive) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  input.left = dx < -20;
+  input.right = dx > 20;
+  input.up = dy < -30;
+  input.down = dy > 30;
+  if (Math.abs(dx) < 20) { input.left = false; input.right = false; }
+  if (Math.abs(dy) < 30) { input.up = false; input.down = false; }
+});
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  touchActive = false;
+  input.left = false; input.right = false; input.up = false; input.down = false;
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  switch(e.key) {
+    case 'ArrowLeft': case 'a': input.left = true; e.preventDefault(); break;
+    case 'ArrowRight': case 'd': input.right = true; e.preventDefault(); break;
+    case 'ArrowUp': case 'w': input.up = true; e.preventDefault(); break;
+    case 'ArrowDown': case 's': input.down = true; e.preventDefault(); break;
+    case ' ': case 'Enter': input.tap = true; e.preventDefault(); break;
+  }
+});
+document.addEventListener('keyup', e => {
+  switch(e.key) {
+    case 'ArrowLeft': case 'a': input.left = false; e.preventDefault(); break;
+    case 'ArrowRight': case 'd': input.right = false; e.preventDefault(); break;
+    case 'ArrowUp': case 'w': input.up = false; e.preventDefault(); break;
+    case 'ArrowDown': case 's': input.down = false; e.preventDefault(); break;
+  }
+});
+
+// ============================================================
+// DRAWING HELPERS
+// ============================================================
+function drawRoundRect(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+}
+
+function drawPixelChar(cx, cy, color, size, hat) {
+  // Simple pixel character body
+  const s = size / 3;
+  // Head
+  ctx.fillStyle = '#f4a460';
+  ctx.fillRect(cx - s*0.6, cy - s*1.8, s*1.2, s*1.2);
+  // Hat
+  ctx.fillStyle = '#5c4033';
+  if (hat) {
+    ctx.fillRect(cx - s*0.8, cy - s*2.4, s*1.6, s*0.6);
+    ctx.fillRect(cx - s*0.5, cy - s*3.0, s*1.0, s*0.7);
+  }
+  // Body
+  ctx.fillStyle = color;
+  ctx.fillRect(cx - s*0.8, cy - s*0.6, s*1.6, s*1.8);
+  // Arms
+  ctx.fillStyle = color;
+  ctx.fillRect(cx - s*1.3, cy - s*0.4, s*0.5, s*1.0);
+  ctx.fillRect(cx + s*0.8, cy - s*0.4, s*0.5, s*1.0);
+  // Legs (pants)
+  ctx.fillStyle = '#3a3a5c';
+  ctx.fillRect(cx - s*0.7, cy + s*1.2, s*0.5, s*1.0);
+  ctx.fillRect(cx + s*0.2, cy + s*1.2, s*0.5, s*1.0);
+  // Eyes
+  ctx.fillStyle = '#000';
+  ctx.fillRect(cx - s*0.3, cy - s*1.3, s*0.2, s*0.2);
+  ctx.fillRect(cx + s*0.1, cy - s*1.3, s*0.2, s*0.2);
+}
+
+// ============================================================
+// DRAW BACKGROUND
+// ============================================================
+function drawBackground() {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  if (section === 1) {
+    grad.addColorStop(0, '#0d1117');
+    grad.addColorStop(1, '#161b22');
+  } else {
+    grad.addColorStop(0, '#1a1a2e');
+    grad.addColorStop(0.4, '#16213e');
+    grad.addColorStop(1, '#0f3460');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Ground
+  const groundY = H - 80;
+  ctx.fillStyle = '#2d1b00';
+  ctx.fillRect(0, groundY, W, 80);
+  // Ground line
+  ctx.strokeStyle = '#4a3520';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.stroke();
+
+  // Road / track
+  ctx.fillStyle = '#3a2a15';
+  ctx.fillRect(0, groundY + 5, W, 30);
+  // Track lines
+  ctx.strokeStyle = '#6b4f30';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 30) {
+    const ox = (x - distance * 2) % W;
+    ctx.fillStyle = '#8b6f50';
+    ctx.fillRect(ox < 0 ? ox + W : ox, groundY + 5, 10, 3);
+  }
+
+  // Background mountains (outside)
+  if (section !== 1) {
+    ctx.fillStyle = '#1a1a2e';
+    for (let i = 0; i < 5; i++) {
+      const mx = (i * 120 - distance * 0.2) % (W + 120) - 60;
+      ctx.beginPath();
+      ctx.moveTo(mx, groundY);
+      ctx.lineTo(mx + 60, groundY - 60 - Math.sin(i*1.5)*20);
+      ctx.lineTo(mx + 120, groundY);
+      ctx.fill();
+    }
+  } else {
+    // Underground walls
+    ctx.fillStyle = '#2a1f0a';
+    ctx.fillRect(0, 0, W, 30);
+    ctx.fillRect(0, 0, 15, H);
+    ctx.fillRect(W-15, 0, 15, H);
+    // Cave ceiling details
+    ctx.fillStyle = '#1a1508';
+    for (let x = 0; x < W; x += 20) {
+      const h = 10 + Math.sin(x*0.1 + distance*0.05) * 8;
+      ctx.fillRect(x, 0, 18, h);
+    }
+  }
+}
+
+// ============================================================
+// SPAWN OBSTACLES
+// ============================================================
+let spawnTimer = 0;
+function spawnObstacles() {
+  spawnTimer--;
+  if (spawnTimer > 0) return;
+  const groundY = H - 80;
+
+  const r = Math.random();
+  if (r < 0.5) {
+    // Rock
+    obstacles.push({
+      type: 'rock',
+      x: W + 20,
+      y: groundY - 25,
+      w: 20 + Math.random()*15,
+      h: 20 + Math.random()*15,
+      color: '#6b5b48'
+    });
+  } else if (r < 0.75) {
+    // Gap (trap)
+    obstacles.push({
+      type: 'gap',
+      x: W + 20,
+      y: groundY - 5,
+      w: 40 + Math.random()*30,
+      h: 10,
+      color: '#1a0f00'
+    });
+  } else {
+    // Low ceiling
+    obstacles.push({
+      type: 'low',
+      x: W + 20,
+      y: groundY - 60,
+      w: 30 + Math.random()*20,
+      h: 25,
+      color: '#4a3a2a'
+    });
+  }
+
+  // Coins sometimes
+  if (Math.random() < 0.4) {
+    coinPickups.push({
+      x: W + 20,
+      y: groundY - 60 - Math.random()*80,
+      r: 8,
+      collected: false
+    });
+  }
+
+  spawnTimer = 30 + Math.floor(Math.random() * 40);
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update() {
+  if (state !== STATE.PLAYING) return;
+  gameTime++;
+  const groundY = H - 80;
+
+  // Scroll speed increases over time
+  scrollSpeed = baseScrollSpeed + Math.floor(gameTime / 600);
+  distance += scrollSpeed;
+
+  // Section transition
+  if (distance > 2000) section = 1;
+  if (distance > 5000) section = 2;
+
+  // --- Player movement ---
+  const char = CHARS[selectedChar];
+  const spd = char.speed * (scrollSpeed + 2);
+
+  // Left/Right
+  if (input.left) player.x -= spd;
+  if (input.right) player.x += spd;
+  player.x = Math.max(20, Math.min(W - 20 - player.w, player.x));
+
+  // Jump
+  if ((input.up || input.tap) && player.onGround) {
+    player.vy = -12;
+    player.onGround = false;
+    player.jumping = true;
+    input.tap = false;
+  }
+
+  // Down = slide
+  if (input.down && player.onGround) {
+    player.slideTimer = 10;
+  }
+  if (player.slideTimer > 0) player.slideTimer--;
+
+  // Gravity
+  player.vy += 0.6;
+  player.y += player.vy;
+
+  // Ground collision
+  const onGroundY = groundY - player.h - (player.slideTimer > 0 ? 10 : 0);
+  if (player.y >= onGroundY) {
+    player.y = onGroundY;
+    player.vy = 0;
+    player.onGround = true;
+    player.jumping = false;
+  } else {
+    player.onGround = false;
+  }
+
+  // Invincibility timer
+  if (player.invincible > 0) player.invincible--;
+
+  // --- Obstacles ---
+  spawnObstacles();
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    o.x -= scrollSpeed;
+
+    if (o.x + o.w < -50) { obstacles.splice(i, 1); continue; }
+
+    // Collision with player
+    if (player.invincible <= 0 && o.type !== 'gap') {
+      const px = player.x, py = player.y, pw = player.w, ph = player.h;
+      const sl = player.slideTimer > 0;
+      const ph2 = sl ? ph - 10 : ph;
+      const py2 = sl ? py + 10 : py;
+
+      if (px < o.x + o.w && px + pw > o.x &&
+          py2 < o.y + o.h && py2 + ph2 > o.y) {
+        // Hit!
+        health--;
+        player.invincible = 45;
+        player.combo = 0;
+        // particles
+        for (let p = 0; p < 10; p++) {
+          particles.push({
+            x: player.x + player.w/2,
+            y: player.y + player.h/2,
+            vx: (Math.random()-0.5)*8,
+            vy: (Math.random()-0.5)*8,
+            life: 30,
+            color: '#ff4444'
+          });
+        }
+        if (health <= 0) {
+          state = STATE.GAMEOVER;
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('mosHighScore', String(highScore));
+          }
+        }
+        obstacles.splice(i, 1);
+      }
+    }
+
+    // Gap fall check
+    if (o.type === 'gap') {
+      if (player.x + player.w/2 > o.x && player.x + player.w/2 < o.x + o.w && player.onGround) {
+        // Fell into gap
+        health--;
+        player.y = groundY - player.h - 20;
+        player.invincible = 30;
+        if (health <= 0) {
+          state = STATE.GAMEOVER;
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('mosHighScore', String(highScore));
+          }
+        }
+      }
+    }
+  }
+
+  // --- Coins ---
+  for (let i = coinPickups.length - 1; i >= 0; i--) {
+    const c = coinPickups[i];
+    c.x -= scrollSpeed;
+    if (c.x < -20) { coinPickups.splice(i, 1); continue; }
+    if (c.collected) continue;
+    // Collision
+    const dx = (player.x + player.w/2) - c.x;
+    const dy = (player.y + player.h/2) - c.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 20) {
+      c.collected = true;
+      score += 10;
+      player.combo++;
+      // Coin particles
+      for (let p = 0; p < 5; p++) {
+        particles.push({
+          x: c.x, y: c.y,
+          vx: (Math.random()-0.5)*4,
+          vy: (Math.random()-0.5)*4 - 3,
+          life: 20,
+          color: '#ffd700'
+        });
+      }
+      if (player.combo >= 5 && player.combo % 5 === 0) {
+        score += 50; // Combo bonus
+      }
+      coinPickups.splice(i, 1);
+    }
+  }
+
+  // --- Particles ---
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Score from distance
+  score = Math.floor(distance / 10);
+
+  // Win condition
+  if (distance > 8000) {
+    state = STATE.WIN;
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem('mosHighScore', String(highScore));
+    }
+  }
+}
+
+// ============================================================
+// DRAW GAME
+// ============================================================
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  switch(state) {
+    case STATE.MENU: drawMenu(); break;
+    case STATE.SELECT: drawSelect(); break;
+    case STATE.PLAYING: drawPlay(); break;
+    case STATE.GAMEOVER: drawGameOver(); break;
+    case STATE.WIN: drawWin(); break;
+  }
+}
+
+function drawMenu() {
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0e1a');
+  grad.addColorStop(0.5, '#1a1f2e');
+  grad.addColorStop(1, '#0a0e1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillStyle = '#d4a843';
+  ctx.fillText('⛏️ 馬鞍山鐵礦場', W/2, 140);
+
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillText('瘋狂礦車大冒險', W/2, 180);
+
+  // Decorative line
+  ctx.strokeStyle = '#d4a843';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(60, 210);
+  ctx.lineTo(W-60, 210);
+  ctx.stroke();
+
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('🅥1 測試版', W/2, 250);
+
+  // Subtitle
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('1950-70年代香港馬鞍山鐵礦場', W/2, 290);
+
+  // Instructions
+  drawRoundRect(W/2-140, 340, 280, 45, 8, '#1e2a3a', '#38bdf8');
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillText('👆 㩒開始遊戲', W/2, 362);
+
+  // Start button
+  drawRoundRect(W/2-100, 420, 200, 55, 10, '#14532d', '#4ade80');
+  ctx.fillStyle = '#4ade80';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText('開始遊戲 🎮', W/2, 447);
+
+  // High score
+  if (highScore > 0) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(`🏆 最高分數: ${highScore}`, W/2, 520);
+  }
+
+  // Controls hint
+  ctx.fillStyle = '#475569';
+  ctx.font = '11px sans-serif';
+  ctx.fillText('📱 觸控：左右滑動移動 · 上滑跳躍 · 下滑蹲低', W/2, 580);
+  ctx.fillText('⌨️ 鍵盤：方向鍵控制 · 空白鍵跳躍', W/2, 600);
+
+  ctx.fillStyle = '#2d3748';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('© 2026 馬鞍山鐵礦場瘋狂礦車大冒險 V1', W/2, 670);
+
+  // Detect click on start button
+  if (input.tap) {
+    const rect = canvas.getBoundingClientRect();
+    // Using last touch position
+    input.tap = false;
+    state = STATE.SELECT;
+  }
+}
+
+function drawSelect() {
+  // Background
+  ctx.fillStyle = '#0a0e1a';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillText('揀你嘅角色 🎭', W/2, 40);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('每個角色有唔同能力', W/2, 70);
+
+  // Character grid
+  const cols = 2;
+  const rows = 4;
+  const cardW = 200, cardH = 120;
+  const startX = (W - (cols * cardW + (cols-1) * 10)) / 2;
+  const startY = 95;
+
+  for (let i = 0; i < CHARS.length; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = startX + col * (cardW + 10);
+    const cy = startY + row * (cardH + 8);
+
+    const isSelected = i === selectedChar;
+
+    // Card background
+    drawRoundRect(cx, cy, cardW, cardH, 8,
+      isSelected ? '#1e3a5f' : '#141b2d',
+      isSelected ? '#38bdf8' : '#1e2a3a');
+
+    // Character pixel
+    drawPixelChar(cx + 40, cy + 50, CHARS[i].color, CHARS[i].size, i < 2 || i === 5 || i === 6);
+
+    // Name
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = isSelected ? '#fbbf24' : '#e2e8f0';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(CHARS[i].name, cx + 70, cy + 20);
+
+    // Description
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px sans-serif';
+    ctx.fillText(CHARS[i].desc, cx + 70, cy + 42);
+
+    // Stats
+    ctx.fillStyle = '#475569';
+    ctx.font = '10px sans-serif';
+    const hearts = '❤️'.repeat(CHARS[i].hp);
+    ctx.fillText(`HP: ${hearts} 速度: ${CHARS[i].speed.toFixed(1)}x`, cx + 70, cy + 62);
+
+    // Selection indicator
+    if (isSelected) {
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✅ 已選中', cx + cardW/2, cy + cardH - 5);
+    }
+  }
+
+  // Start button
+  drawRoundRect(W/2-100, startY + 4*125 + 10, 200, 50, 10, '#14532d', '#4ade80');
+  ctx.fillStyle = '#4ade80';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('✅ 開始冒險！', W/2, startY + 4*125 + 35);
+
+  // Detect tap
+  if (input.tap) {
+    const rect = canvas.getBoundingClientRect();
+    // Check character selection
+    for (let i = 0; i < CHARS.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx = startX + col * (cardW + 10);
+      const cy = startY + row * (cardH + 8);
+      // Tap check (simplified - just check the start button area)
+    }
+    // Check start button
+    const btnY = startY + 4*125 + 10;
+    input.tap = false;
+    state = STATE.PLAYING;
+    resetGame();
+  }
+
+  // Character select by clicking
+  // Simplified: tap on character area selects them, tap start button begins
+  // Actually let me add character selection on next tap
+}
+
+function resetGame() {
+  player.x = 100;
+  player.y = H - 80 - player.h;
+  player.vy = 0;
+  player.vx = 0;
+  player.onGround = true;
+  player.jumping = false;
+  player.slideTimer = 0;
+  player.invincible = 0;
+  player.combo = 0;
+  obstacles = [];
+  coinPickups = [];
+  particles = [];
+  score = 0;
+  gameTime = 0;
+  distance = 0;
+  section = 0;
+  spawnTimer = 30;
+  scrollSpeed = baseScrollSpeed;
+  health = CHARS[selectedChar].hp;
+  maxHealth = CHARS[selectedChar].hp;
+}
+
+function drawPlay() {
+  drawBackground();
+  const groundY = H - 80;
+
+  // --- Draw obstacles ---
+  for (const o of obstacles) {
+    if (o.type === 'rock') {
+      ctx.fillStyle = o.color;
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y + o.h);
+      ctx.lineTo(o.x + o.w*0.2, o.y);
+      ctx.lineTo(o.x + o.w*0.8, o.y - 5);
+      ctx.lineTo(o.x + o.w, o.y + o.h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#3a2a15';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Highlight
+      ctx.fillStyle = 'rgba(255,255,200,0.1)';
+      ctx.fillRect(o.x + 3, o.y + 3, o.w/3, o.h/3);
+    } else if (o.type === 'gap') {
+      ctx.fillStyle = '#0a0500';
+      ctx.fillRect(o.x, o.y, o.w, o.h + 10);
+      ctx.fillStyle = '#1a0f00';
+      ctx.fillRect(o.x - 2, o.y, 4, o.h + 10);
+      ctx.fillRect(o.x + o.w - 2, o.y, 4, o.h + 10);
+    } else if (o.type === 'low') {
+      ctx.fillStyle = o.color;
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = '#2a1a0a';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(o.x, o.y, o.w, o.h);
+      // Rock texture
+      ctx.fillStyle = '#5a4a3a';
+      for (let t = 0; t < 3; t++) {
+        ctx.fillRect(o.x + 5 + t*8, o.y + 5, 5, 5);
+      }
+    }
+  }
+
+  // --- Draw coins ---
+  for (const c of coinPickups) {
+    if (c.collected) continue;
+    const glow = Math.sin(gameTime * 0.1) * 2;
+    // Glow
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r + 4, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,215,0,0.2)';
+    ctx.fill();
+    // Coin
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
+    ctx.fillStyle = '#ffd700';
+    ctx.fill();
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // $ symbol
+    ctx.fillStyle = '#8B6914';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', c.x, c.y + 1);
+  }
+
+  // --- Draw player ---
+  if (player.invincible > 0 && Math.floor(player.invincible / 5) % 2 === 0) {
+    // Flash when invincible
+  } else {
+    const p = player;
+    const char = CHARS[selectedChar];
+    const sl = player.slideTimer > 0;
+    const cy = p.y + (sl ? p.h - 10 : p.h/2);
+
+    drawPixelChar(p.x + p.w/2, p.y + (sl ? 10 : 0), char.color, char.size, selectedChar < 2 || selectedChar === 5 || selectedChar === 6);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(p.x + p.w/2, groundY + 2, 12, 4, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // --- Particles ---
+  for (const p of particles) {
+    const alpha = p.life / 30;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+
+  // --- UI ---
+  // HUD background
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  drawRoundRect(5, 5, W-10, 40, 6, 'rgba(0,0,0,0.5)', null);
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  // Distance/progress
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px sans-serif';
+  ctx.fillText('📍 240ML礦洞 → 110ML', 15, 22);
+
+  // Score
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(`💰 ${score}`, W-15, 22);
+
+  // Health
+  ctx.textAlign = 'left';
+  let hpText = '';
+  for (let i = 0; i < maxHealth; i++) {
+    hpText += i < health ? '❤️' : '🖤';
+  }
+  ctx.fillStyle = '#f87171';
+  ctx.font = '11px sans-serif';
+  ctx.fillText(hpText, 15, 38);
+
+  // Combo
+  if (player.combo >= 3) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`🔥 ${player.combo} COMBO!`, W/2, 38);
+  }
+
+  // Section indicator
+  const sectionNames = ['🪨 露天礦場', '⛰️ 礦洞內部', '🕳️ 地下坑道'];
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = '11px sans-serif';
+  ctx.fillText(sectionNames[section], W/2, 12);
+
+  // Progress bar
+  const progress = Math.min(distance / 8000, 1);
+  ctx.fillStyle = '#1e2a3a';
+  drawRoundRect(60, 8, W-120, 6, 3, '#1e2a3a', null);
+  ctx.fillStyle = '#4ade80';
+  drawRoundRect(60, 8, (W-120) * progress, 6, 3, '#4ade80', null);
+}
+
+function drawGameOver() {
+  drawPlay();
+
+  // Overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = 'bold 36px sans-serif';
+  ctx.fillStyle = '#f87171';
+  ctx.fillText('💀 遊戲結束', W/2, 180);
+
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText(`💰 分數: ${score}`, W/2, 250);
+
+  if (score >= highScore && score > 0) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText('🏆 新紀錄！', W/2, 290);
+  }
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px sans-serif';
+  ctx.fillText(`最高分數: ${highScore}`, W/2, 330);
+
+  // Retry button
+  drawRoundRect(W/2-100, 380, 200, 55, 10, '#5c1a1a', '#f87171');
+  ctx.fillStyle = '#f87171';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('🔄 再玩一次', W/2, 407);
+
+  // Back to menu
+  drawRoundRect(W/2-100, 450, 200, 45, 8, '#1e2a3a', '#94a3b8');
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '16px sans-serif';
+  ctx.fillText('🏠 返回主選單', W/2, 472);
+
+  if (input.tap) {
+    input.tap = false;
+    const rect = canvas.getBoundingClientRect();
+    // Simplified: tap anywhere retries for now
+    state = STATE.SELECT;
+  }
+}
+
+function drawWin() {
+  drawPlay();
+
+  // Overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = 'bold 32px sans-serif';
+  ctx.fillStyle = '#4ade80';
+  ctx.fillText('🎉 到達耀安邨！', W/2, 170);
+
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('你成功從240ML礦洞穿越到耀安邨', W/2, 220);
+
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText(`💰 總分數: ${score}`, W/2, 280);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px sans-serif';
+  ctx.fillText(`最高分數: ${highScore}`, W/2, 320);
+
+  drawRoundRect(W/2-100, 370, 200, 55, 10, '#14532d', '#4ade80');
+  ctx.fillStyle = '#4ade80';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('🔄 再玩一次', W/2, 397);
+
+  if (input.tap) {
+    input.tap = false;
+    state = STATE.SELECT;
+  }
+}
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+function gameLoop() {
+  const rect = canvas.getBoundingClientRect();
+
+  // Handle tap on menu/select
+  if (state === STATE.MENU && input.tap) {
+    // Check if tap is on start button area
+    input.tap = false;
+    state = STATE.SELECT;
+  } else if (state === STATE.SELECT && input.tap) {
+    input.tap = false;
+    // Could add character selection here, for now just start
+    state = STATE.PLAYING;
+    resetGame();
+  } else if (state === STATE.GAMEOVER && input.tap) {
+    input.tap = false;
+    state = STATE.SELECT;
+  } else if (state === STATE.WIN && input.tap) {
+    input.tap = false;
+    state = STATE.SELECT;
+  }
+
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Start
+gameLoop();
+</script>
+</body>
+</html>
