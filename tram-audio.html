@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>礦村觀光列車 — 語音導賞</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:"Segoe UI",sans-serif;overflow:hidden;height:100dvh;touch-action:none}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:500px;margin:0 auto}
+#scene-area{flex:1;position:relative;background:#1a1f2e;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#sceneCanvas{width:100%;height:100%}
+#loc-tag{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);padding:5px 12px;border-radius:6px;font-size:12px;color:#fbbf24}
+#narration{background:#141b2d;padding:14px;border-top:1px solid #1e2a3a;min-height:190px;display:flex;flex-direction:column}
+#speaker{display:flex;align-items:flex-start;gap:10px}
+#avatar{width:40px;height:40px;border-radius:50%;background:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+#speech{font-size:16px;line-height:1.6;color:#e2e8f0;flex:1}
+#progress{display:flex;gap:3px;justify-content:center;margin:6px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:#1e2a3a}.dot.active{background:#38bdf8}.dot.done{background:#4ade80}
+#nav{display:flex;justify-content:space-between;align-items:center}
+.nav-btn{padding:7px 18px;border-radius:6px;border:1px solid #1e2a3a;background:#0f1525;color:#94a3b8;font-size:13px;cursor:pointer}
+.nav-btn:active{background:#1e2a3a}
+.nav-btn.speak{background:#14532d;border-color:#4ade80;color:#4ade80}
+#title{position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a0e1a,#1a1f2e);padding:20px;text-align:center}
+#title h1{color:#fbbf24;font-size:28px;margin-bottom:5px}
+#title h2{color:#e2e8f0;font-size:20px;margin-bottom:15px}
+#title .btn{padding:14px 50px;border-radius:8px;border:1px solid #38bdf8;background:rgba(56,189,248,0.1);color:#38bdf8;font-size:16px;cursor:pointer;margin-top:20px}
+#title .info{color:#94a3b8;font-size:12px;margin-top:15px;line-height:1.8}
+</style>
+</head>
+<body>
+<div id="title">
+  <div style="color:#94a3b8;font-size:12px;letter-spacing:2px;margin-bottom:8px">🚋 鞍山探索館</div>
+  <h1>礦村觀光列車</h1>
+  <h2>語音導賞之旅</h2>
+  <div class="info">由240ML礦洞出發，穿越礦村到耀安邨<br>🎧 自動廣東話語音導賞</div>
+  <a class="btn" id="startBtn">🚋 出發！</a>
+</div>
+<div id="app" style="display:none">
+  <div id="scene-area">
+    <div id="loc-tag">📍 240ML 礦洞</div>
+    <canvas id="sceneCanvas"></canvas>
+  </div>
+  <div id="narration">
+    <div id="speaker"><div id="avatar">👩‍🏫</div><div id="speech">歡迎嚟到礦村觀光列車...</div></div>
+    <div id="progress"></div>
+    <div id="nav">
+      <button class="nav-btn" id="prevBtn">← 上一站</button>
+      <button class="nav-btn speak" id="speakBtn">🔊 聽語音</button>
+      <button class="nav-btn" id="nextBtn">下一站 →</button>
+    </div>
+  </div>
+</div>
+<script>
+const stops=[
+{id:'240ml',name:'240ML 礦洞入口',img:'#4a3520',
+ text:'歡迎嚟到馬鞍山鐵礦場嘅觀光列車之旅！我哋而家身處海拔240米嘅240ML礦洞入口。呢個係馬鞍山鐵礦場最主要嘅礦洞，1953年由大公洋行開挖。礦工每日開工之前，要去警衛室翻名牌——紅色代表入礦，綠色代表出礦。如果收工嗰陣紅色名牌仲未翻，工頭就要入礦揾人。請上車，我哋準備出發！'},
+{id:'tunnel',name:'礦洞隧道',
+ text:'而家我哋進入咗礦洞內部。兩邊嘅石壁係當年礦工用風鑽同炸藥爆出嚟嘅。礦洞入面有抽氣扇通風，仲有儲水設施，礦工叫佢「一箱全家240ML」。礦洞分四層：240ML、192ML、144ML同110ML，層與層之間用斜路同豎井連接。'},
+{id:'110ml',name:'110ML 主坑道',
+ text:'而家我哋喺海拔110米嘅主坑道，全長2,200米，1961年開挖。上面呢條係電動牽引機車嘅天線。呢架機車每次可以拖住十幾架礦卡。喺最高峰嘅1971年，礦場一年生產咗19萬噸鐵礦石。'},
+{id:'factory',name:'選礦廠',
+ text:'呢度係選礦廠，1954年落成，造價14萬港元。選礦廠將鐵礦石由37%純鐵含量提升到57至59%。七個步驟：碎礦機、振動篩、電磁乾選機、球磨機、棒磨機、濕選機、最後脫磁沉澱真空脫水。精礦經運輸帶送去碼頭裝船。'},
+{id:'church',name:'恩光堂',
+ text:'各位可以落車行吓。呢間係信義會恩光堂，1952年建成，香港信義會第一間自建禮拜堂。鐘樓上面嘅紅色十字架係礦村地標。白色牆身，屋頂生咗青苔。恩光堂唔單止係崇拜地方，仲係學校同社區中心。牧師同修女會喺度派救濟品。'},
+{id:'market',name:'天光墟',
+ text:'各位，而家係清晨六點鐘。面前就係天光墟——礦村最熱鬧嘅地方。每日朝早六點到七點，恩光堂門外嘅小路變成市集。菜檔、魚檔、豬肉檔、燒餅佬、雲吞麵店、士多。礦工妻子朝朝買餸，小朋友圍住士多買糖。魚佬朝早三點起身行路去西貢擔魚返上山。'},
+{id:'bridge',name:'平安橋',
+ text:'呢條係平安橋。橋頭石碑刻住「平安槁」——用槁字唔係橋字。1962至63年起，最初只係木板搭喺山澗。每逢大雨水流湍急，過橋好危險。一次外國工程師差啲冲走，公司決定起有橋墩嘅橋。平安橋寓意礦工平安去開工，平安返屋企。'},
+{id:'village',name:'礦村四區',
+ text:'礦村分四區：山頂區住北方人，有教會學校。馬鞍橋區住客家人，潮洲村區住潮州人，碼頭區住廣東人。礦工來自五湖四海，高峰成萬人生活。村裏有學校、士多、波樓，係完整小社區。'},
+{id:'pier',name:'碼頭區·耀安邨',
+ text:'到達終點站！呢度係昔日礦石碼頭。精礦經運輸帶送到碼頭，用躉船裝上貨輪。當年「大寶山號」同「大寶石號」每艘載重三千噸，運礦石去日本。而家呢個位置就係耀安邨，以前係機器聲不斷嘅工業碼頭。'},
+{id:'end',name:'結語',
+ text:'1976年，馬鞍山鐵礦場因成本問題結業。通脹、港元貶值、開採成本上升，日本轉向南美同澳洲入口。礦村居民陸續搬走，九十年代政府發展新市鎮。今日鞍山探索館繼續保存呢段歷史，等更多人認識香港呢段獨特工業故事。多謝參加觀光列車之旅！'}
+];
+let cur=0;
+const speechEl=document.getElementById('speech');
+const locTag=document.getElementById('loc-tag');
+const progressEl=document.getElementById('progress');
+let synth=window.speechSynthesis;
+let utt=null;
+
+function goTo(i){
+ cur=Math.max(0,Math.min(stops.length-1,i));
+ const s=stops[cur];
+ locTag.textContent='📍 '+s.name;
+ speechEl.textContent=s.text;
+ // Progress dots
+ progressEl.innerHTML='';
+ stops.forEach((_,idx)=>{
+  const d=document.createElement('div');d.className='dot';
+  if(idx===cur)d.classList.add('active');
+  else if(idx<cur)d.classList.add('done');
+  progressEl.appendChild(d);
+ });
+ // Scene color
+ const colors=['#2a1f0a','#0a0a0a','#1a1a2e','#4a3a2a','#e8e0d0','#d4a373','#3a5a3a','#3a4a2a','#8ba8c4','#6a7a8a'];
+ document.getElementById('scene-area').style.background=colors[cur]||'#1a1f2e';
+ // Stop synth if playing
+ if(synth.speaking){synth.cancel();utt=null;}
+}
+
+function speak(){
+ if(synth.speaking){synth.cancel();return;}
+ const s=stops[cur];
+ // Try Cantonese voice
+ let voice=null;
+ const voices=synth.getVoices();
+ for(const v of voices){
+  if(v.lang.startsWith('zh-HK')||v.lang.startsWith('zh-hk')||v.lang.startsWith('yue')){voice=v;break;}
+ }
+ if(!voice){for(const v of voices){if(v.lang.startsWith('zh')){voice=v;break;}}}
+ utt=new SpeechSynthesisUtterance(s.text);
+ if(voice)utt.voice=voice;
+ utt.lang='zh-HK';
+ utt.rate=0.9;
+ utt.pitch=1.0;
+ utt.volume=1;
+ synth.speak(utt);
+}
+synth.getVoices(); // Preload
+
+document.getElementById('prevBtn').addEventListener('click',()=>goTo(cur-1));
+document.getElementById('nextBtn').addEventListener('click',()=>goTo(cur+1));
+document.getElementById('speakBtn').addEventListener('click',speak);
+document.getElementById('startBtn').addEventListener('click',()=>{
+ document.getElementById('title').style.display='none';
+ document.getElementById('app').style.display='flex';
+ goTo(0);
+ setTimeout(speak,500);
+});
+</script>
+</body>
+</html>
