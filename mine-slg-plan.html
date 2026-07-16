@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0">
+<title>礦村謀定天下 — UE5 SLG 遊戲計劃書</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;font-size:18px;line-height:1.7}
+.container{max-width:1000px;margin:0 auto}
+h1{color:#fbbf24;font-size:2rem;text-align:center;margin-bottom:4px}
+h2{color:#38bdf8;font-size:1.3rem;margin-bottom:12px;border-bottom:1px solid #1e2a3a;padding-bottom:6px}
+h3{color:#a78bfa;font-size:1.1rem;margin:12px 0 6px}
+.subtitle{color:#94a3b8;text-align:center;font-size:0.85rem;margin-bottom:20px}
+.section{background:#141b2d;border:1px solid #1e2a3a;border-radius:12px;padding:20px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:0.9rem}
+th{background:#1e2a3a;color:#fbbf24;padding:8px 10px;text-align:left}
+td{padding:7px 10px;border-bottom:1px solid #1e2a3a}
+tr:hover{background:#1a2340}
+ .num{text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.8rem;font-weight:600}
+.green{background:#14532d;color:#4ade80}
+.blue{background:#1a3a5c;color:#38bdf8}
+.purple{background:#3a1a5c;color:#a78bfa}
+.gold{background:#5c3d1a;color:#fbbf24}
+.red{background:#5c1a1a;color:#f87171}
+.info-box{background:#0f1525;border-left:3px solid #38bdf8;padding:12px;margin:10px 0;border-radius:0 6px 6px 0;font-size:0.85rem}
+.info-box strong{color:#fbbf24}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+@media(max-width:700px){.columns{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>⛏️ 礦村謀定天下</h1>
+<p class="subtitle">以《三國：謀定天下》為藍本 · Unreal Engine 5 · 馬鞍山鐵礦場 SLG</p>
+
+<div class="section">
+<h2>🎯 概念總覽</h2>
+<div class="columns">
+<div class="info-box"><strong>《三國：謀定天下》參考點</strong><br>
+• 自動舖路/自動練兵<br>
+• 預約攻城（離線參戰）<br>
+• 六大職業分工<br>
+• 四大承諾：不賣資源、不賣加速、無VIP、不鎖卡<br>
+• AI 沙盤重播<br>
+• 減輕繁瑣操作
+</div>
+<div class="info-box"><strong>馬鞍山鐵礦場 SLG 改編</strong><br>
+• 接管礦場經營（1950-1976）<br>
+• 自動開採/運輸排程<br>
+• 六大工隊職業<br>
+• 四大承諾：不課金贏資源、公平競爭<br>
+• AI 歷史重播系統<br>
+• 一鍵排程，專注策略決策
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>🏗️ 世界觀：1950-1976 馬鞍山鐵礦場</h2>
+<p>玩家扮演礦場經理（或工頭），喺 1950 年至 1976 年間經營馬鞍山鐵礦場。目標係喺有限資源同市場波動下，盡量提升產量同利潤，同時照顧礦工福祉。</p>
+<table>
+<tr><th>年份</th><th>歷史事件</th><th>遊戲效果</th></tr>
+<tr><td>1953</td><td>240ML礦洞開挖</td><td>解鎖第一層礦洞</td></tr>
+<tr><td>1954</td><td>選礦廠落成</td><td>解鎖選礦七步流程</td></tr>
+<tr><td>1961-63</td><td>110ML礦洞開挖</td><td>解鎖電動火車運輸</td></tr>
+<tr><td>1962-63</td><td>平安橋建成</td><td>解鎖礦區連接路</td></tr>
+<tr><td>1971</td><td>產量巔峰19萬噸</td><td>目標產量挑戰</td></tr>
+<tr><td>1976</td><td>礦場結業</td><td>結局結算</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>⚙️ 六大工隊職業（對應三國謀定天下六大職業）</h2>
+<table>
+<tr><th>職業</th><th>三國對位</th><th>礦場版能力</th><th>適合玩家</th></tr>
+<tr><td>👷 <strong>鑽井隊</strong></td><td>奇佐（謀略）</td><td>開採效率+30%，解鎖深層礦脈</td><td>想衝產量</td></tr>
+<tr><td>🚂 <strong>運輸隊</strong></td><td>神行（機動）</td><td>運輸速度+40%，碼頭裝載量加倍</td><td>想優化物流</td></tr>
+<tr><td>🔧 <strong>選礦隊</strong></td><td>天工（工匠）</td><td>選礦回收率+25%，精礦品位提升</td><td>想提升利潤</td></tr>
+<tr><td>🏥 <strong>醫護隊</strong></td><td>鎮軍（防守）</td><td>礦工健康+50%，事故率減半</td><td>想照顧礦工</td></tr>
+<tr><td>📖 <strong>教會隊</strong></td><td>司倉（資源）</td><td>社區士氣+40%，招募礦工速度翻倍</td><td>想擴張規模</td></tr>
+<tr><td>💰 <strong>商貿隊</strong></td><td>追襲（輸出）</td><td>鐵礦售價+20%，解鎖特殊出口路線</td><td>想賺最多錢</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>🗺️ UE5 地圖系統</h2>
+<div class="columns">
+<div>
+<h3>🏔️ 真實地形</h3>
+<table>
+<tr><th>區域</th><th>遊戲功能</th></tr>
+<tr><td>240ML 礦洞</td><td>主礦脈，產量最高</td></tr>
+<tr><td>192ML 坑道</td><td>中層運輸</td></tr>
+<tr><td>144ML 坑道</td><td>採礦前線</td></tr>
+<tr><td>110ML 坑道</td><td>電動火車主幹道</td></tr>
+<tr><td>選礦廠</td><td>七步流程升級</td></tr>
+<tr><td>碼頭區</td><td>出口物流中心</td></tr>
+<tr><td>礦村四區</td><td>工人宿舍+設施</td></tr>
+<tr><td>恩光堂</td><td>社區中心，士氣加成</td></tr>
+<tr><td>天光墟</td><td>資源交易市場</td></tr>
+</table>
+</div>
+<div>
+<h3>🎮 遊戲系統</h3>
+<table>
+<tr><th>系統</th><th>三國謀定天下參考</th><th>礦場版</th></tr>
+<tr><td>自動化</td><td>自動舖路</td><td>自動開採排程</td></tr>
+<tr><td>離線參與</td><td>預約攻城</td><td>預約運輸船期</td></tr>
+<tr><td>職業系統</td><td>六大職業</td><td>六大工隊</td></tr>
+<tr><td>公平承諾</td><td>不賣資源/無VIP</td><td>不課金贏資源</td></tr>
+<tr><td>事件系統</td><td>賽季攻城</td><td>年度市場波動</td></tr>
+<tr><td>重播</td><td>AI沙盤</td><td>歷史產線重播</td></tr>
+</table>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>🎮 核心玩法循環</h2>
+<div class="columns">
+<div class="info-box">
+<strong>📅 每日循環：</strong><br>
+1. 檢視產量報告<br>
+2. 排程開採/運輸<br>
+3. 處理突發事件（礦難/機械故障）<br>
+4. 升級設施/招聘礦工<br>
+5. 出口鐵礦石
+</div>
+<div class="info-box">
+<strong>📆 季度循環：</strong><br>
+1. 市場鐵價波動<br>
+2. 季節影響（雨季減產）<br>
+3. 工隊士氣評估<br>
+4. 年度產量目標
+</div>
+</div>
+<div class="info-box">
+<strong>🏆 最終目標：</strong><br>
+喺1976年前盡量提升總產量同利潤，同時完成歷史里程碑。遊戲結束時會根據表現評級（S/A/B/C），並展示你嘅礦場歷史年表。
+</div>
+</div>
+
+<div class="section">
+<h2>📜 事件系統（模仿三國謀定天下賽季事件）</h2>
+<table>
+<tr><th>年份</th><th>事件</th><th>選項</th><th>影響</th></tr>
+<tr><td>1953</td><td>大公洋行投資240ML</td><td>接受/談判</td><td>啟動資金 vs 分紅比例</td></tr>
+<tr><td>1954</td><td>選礦廠造價14萬</td><td>自建/貸款</td><td>利息壓力 vs 產能提升</td></tr>
+<tr><td>1962</td><td>平安橋興建提案</td><td>贊助/觀望</td><td>礦工士氣 vs 開支</td></tr>
+<tr><td>1964</td><td>日本鋼鐵需求暴增</td><td>擴產/穩守</td><td>短期暴利 vs 長期可持續</td></tr>
+<tr><td>1967</td><td>六七暴動影響</td><td>停工/加薪</td><td>安全 vs 成本</td></tr>
+<tr><td>1971</td><td>產量巔峰19萬噸</td><td>衝20萬/保守</td><td>歷史紀錄 vs 礦工疲勞</td></tr>
+<tr><td>1973</td><td>石油危機</td><td>轉型/撐住</td><td>運輸成本暴漲</td></tr>
+<tr><td>1976</td><td>礦場結業</td><td>多個結局</td><td>按表現解鎖不同結局</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>🛠️ UE5 技術架構</h2>
+<table>
+<tr><th>系統</th><th>技術方案</th><th>說明</th></tr>
+<tr><td>引擎</td><td>Unreal Engine 5.5+</td><td>Lumen + Nanite 真實渲染</td></tr>
+<tr><td>地形</td><td>World Partition + Landscape</td><td>3km x 3km 真實馬鞍山地形</td></tr>
+<tr><td>建築</td><td>Nanite 高模組</td><td>根據歷史照片重建</td></tr>
+<tr><td>UI</td><td>UMG + Common UI</td><td>手機觸控優化</td></tr>
+<tr><td>數據</td><td>DataTable + GameplayTags</td><td>事件/資源/工隊管理</td></tr>
+<tr><td>網絡</td><td>單機為主 + 雲存档</td><td>休閒 SLG，非實時對戰</td></tr>
+<tr><td>平台</td><td>iOS / Android</td><td>手機優先，平板支援</td></tr>
+<tr><td>AI</td><td>Behaviour Tree</td><td>礦工 AI 行為模擬</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📱 手機 UI 設計原則</h2>
+<table>
+<tr><th>三國謀定天下做法</th><th>礦場版</th></tr>
+<tr><td>一鍵舖路</td><td>一鍵排程開採</td></tr>
+<tr><td>自動練兵</td><td>自動培訓礦工</td></tr>
+<tr><td>預約攻城</td><td>預約船期出口</td></tr>
+<tr><td>職業技能樹</td><td>工隊技能樹</td></tr>
+<tr><td>世界地圖沙盤</td><td>礦區 3D 全景地圖</td></tr>
+<tr><td>戰報系統</td><td>產量報告 + 事故記錄</td></tr>
+<tr><td>同盟系統</td><td>礦工工會</td></tr>
+<tr><td>賽季制</td><td>十年一賽季（1950s/60s/70s）</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>💰 四大承諾（模仿三國謀定天下）</h2>
+<div class="columns">
+<div class="info-box"><strong>① 不賣資源</strong><br>鐵礦石/資金只能透過經營獲得，唔可以直接課金買</div>
+<div class="info-box"><strong>② 不賣加速</strong><br>開採/運輸/建設排程不能課金跳過</div>
+<div class="info-box"><strong>③ 無VIP</strong><br>無VIP特權，公平競爭</div>
+<div class="info-box"><strong>④ 不鎖內容</strong><br>所有工隊/設施透過遊戲解鎖，唔使抽卡</div>
+</div>
+</div>
+
+<div class="section">
+<h2>🎨 美術風格</h2>
+<table>
+<tr><th>元素</th><th>風格</th><th>參考</th></tr>
+<tr><td>整體</td><td>真實寫實風</td><td>UE5 Lumen 全局光照</td></tr>
+<tr><td>礦洞</td><td>陰暗工業風</td><td>1950年代礦場照片</td></tr>
+<tr><td>礦村</td><td>懷舊香港鄉郊</td><td>鞍山探索館老照片</td></tr>
+<tr><td>選礦廠</td><td>機械工業風</td><td>七步流程機組</td></tr>
+<tr><td>角色</td><td>寫實半身像</td><td>嶺南人物風格</td></tr>
+<tr><td>UI</td><td>簡約復古</td><td>舊報紙/文件風格</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📋 開發路線（參考三國謀定天下6個月開發週期）</h2>
+<table>
+<tr><th>階段</th><th>工期</th><th>內容</th><th>交付物</th></tr>
+<tr><td>📐 POC</td><td>1個月</td><td>UE5 地形 + 基礎 UI</td><td>可行嘅 3D 地圖原型</td></tr>
+<tr><td>⚙️ Alpha</td><td>2個月</td><td>資源系統 + 工隊系統 + 事件</td><td>可玩核心循環</td></tr>
+<tr><td>🎨 Beta</td><td>2個月</td><td>美術完善 + 音效 + 教學</td><td>完整遊戲版本</td></tr>
+<tr><td>🚀 上線</td><td>1個月</td><td>測試 + 優化 + 商店上架</td><td>App Store / Google Play</td></tr>
+</table>
+<div class="info-box"><strong>⚠️ 不過Ming你提過唔准隨便安裝軟件。</strong> UE5 開發需要安裝 Unreal Engine（約 40GB）同 Visual Studio。如果只係想睇 prototype，可以用 Three.js 做個網頁版 SLG 原型先，確認玩法再決定係咪落本 UE5。</div>
+</div>
+
+<div class="section">
+<h2>🔍 同三國謀定天下嘅關鍵對比</h2>
+<table>
+<tr><th>維度</th><th>三國：謀定天下</th><th>礦村謀定天下</th></tr>
+<tr><td>背景</td><td>三國爭霸</td><td>1950-76鐵礦經營</td></tr>
+<tr><td>地圖</td><td>中國十三州</td><td>馬鞍山礦區</td></tr>
+<tr><td>資源</td><td>糧草/木材/石料/鐵礦</td><td>鐵礦石/資金/設備/人力</td></tr>
+<tr><td>戰鬥</td><td>攻城戰</td><td>市場競爭/出口配額戰</td></tr>
+<tr><td>武將</td><td>三國名將</td><td>工頭/工程師/傳教士</td></tr>
+<tr><td>同盟</td><td>軍團聯盟</td><td>礦工工會</td></tr>
+<tr><td>賽季</td><td>歷史劇本</td><td>十年一賽季</td></tr>
+<tr><td>核心 tension</td><td>領土擴張 vs 防守</td><td>產量最大化 vs 可持續經營</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 下一步建議</h2>
+<div class="columns">
+<div class="info-box">
+<strong>✅ 方案 A：先做 HTML5 原型</strong><br>
+用 Three.js 整一個可玩嘅 SLG 網頁版<br>
+✔ 1-2 日完成<br>
+✔ 免費 hosting<br>
+✔ 試玩法啱唔啱先<br>
+❌ 冇 UE5 畫質
+</div>
+<div class="info-box">
+<strong>✅ 方案 B：直接 UE5</strong><br>
+用 Unreal Engine 5 整正式版<br>
+✔ 最高畫質<br>
+✔ 完整手機版<br>
+❌ 要安裝 UE5 (~40GB)<br>
+❌ 開發數月
+</div>
+</div>
+</div>
+
+<div class="section" style="text-align:center;padding:15px;color:#475569;font-size:0.75rem">
+由 無虛 (mvmv) 生成 — 分享版本<br>
+參考遊戲：《三國：謀定天下》· 參考資料：鞍山探索館 · 計劃書日期：2026年7月
+</div>
+
+</div>
+</body>
+</html>
