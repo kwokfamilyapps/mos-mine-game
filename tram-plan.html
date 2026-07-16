@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0">
+<title>礦村觀光列車 UE5 實作計劃</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;font-size:20px;line-height:1.7}
+.container{max-width:950px;margin:0 auto}
+h1{color:#fbbf24;font-size:1.8rem;text-align:center;margin-bottom:4px}
+h2{color:#38bdf8;font-size:1.3rem;margin-bottom:12px;border-bottom:1px solid #1e2a3a;padding-bottom:6px}
+h3{color:#a78bfa;font-size:1.05rem;margin:14px 0 6px}
+.sub{color:#94a3b8;text-align:center;font-size:0.85rem;margin-bottom:20px}
+.section{background:#141b2d;border:1px solid #1e2a3a;border-radius:12px;padding:20px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:0.9rem}
+th{background:#1e2a3a;color:#fbbf24;padding:8px 10px;text-align:left;font-weight:600}
+td{padding:7px 10px;border-bottom:1px solid #1e2a3a}
+tr:hover{background:#1a2340}
+.num{text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.8rem;font-weight:600}
+.green{background:#14532d;color:#4ade80}
+.blue{background:#1a3a5c;color:#38bdf8}
+.gold{background:#5c3d1a;color:#fbbf24}
+.red{background:#5c1a1a;color:#f87171}
+.info-box{background:#0f1525;border-left:3px solid #38bdf8;padding:12px;margin:10px 0;border-radius:0 6px 6px 0;font-size:0.85rem}
+.info-box strong{color:#fbbf24}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.flow{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.flow-item{background:#0f1525;padding:8px 12px;border-radius:6px;border-left:3px solid #38bdf8;font-size:0.9rem}
+.flow-item .arrow{color:#475569;font-size:0.8rem}
+@media(max-width:700px){.columns{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🚋 礦村觀光列車</h1>
+<p class="sub">Unreal Engine 5 實作計劃 · 以鞍山探索館真實歷史為藍本</p>
+
+<div class="section">
+<h2>🎯 遊戲定位</h2>
+<div class="columns">
+<div class="info-box"><strong>類型：</strong> 3D 觀光模擬器<br><strong>視角：</strong> 第一人稱（坐喺礦車）<br><strong>風格：</strong> 真實寫實（UE5 Lumen）<br><strong>平台：</strong> PC > 手機<br><strong>時間：</strong> 1950-70年代</div>
+<div class="info-box"><strong>核心體驗：</strong><br>🚋 坐住電動牽引機車<br>🌄 由240ML出發到耀安邨<br>🎧 自動語音講解歷史<br>🛑 中途停站落車探索<br>🌅 天光墟清晨市集重現</div>
+</div>
+</div>
+
+<div class="section">
+<h2>🗺️ 完整路線與車站設計</h2>
+<table>
+<tr><th>站</th><th>地點</th><th>車程</th><th>停留</th><th>亮點</th></tr>
+<tr><td>🚉 起點</td><td><strong>240ML 礦洞入口</strong></td><td>-</td><td>2分鐘</td><td>睇名牌制度，上車</td></tr>
+<tr><td>🕳️ 途經</td><td><strong>礦洞隧道</strong></td><td>1分鐘</td><td>慢速通過</td><td>暗黑環境，頭燈照明</td></tr>
+<tr><td>🕳️ 途經</td><td><strong>192ML→144ML 斜路</strong></td><td>45秒</td><td>-</td><td>體驗礦車落斜</td></tr>
+<tr><td>🕳️ 途經</td><td><strong>110ML 主坑道</strong></td><td>2分鐘</td><td>慢速通過</td><td>電動火車場景，礦工工作</td></tr>
+<tr><td>🚉 第1站</td><td><strong>🏭 選礦廠</strong></td><td>1分鐘</td><td>⏸️ 5分鐘</td><td>睇七步流程機械運作</td></tr>
+<tr><td>🚉 第2站</td><td><strong>⛪ 恩光堂</strong></td><td>2分鐘</td><td>⏸️ 5分鐘</td><td>落車入教堂，睇鐘樓紅十字</td></tr>
+<tr><td>🚉 第3站</td><td><strong>🌅 天光墟</strong></td><td>步行</td><td>⏸️ 8分鐘</td><td>清晨市集，檔口互動</td></tr>
+<tr><td>🚉 第4站</td><td><strong>🌉 平安橋</strong></td><td>2分鐘</td><td>⏸️ 3分鐘</td><td>睇石碑，聽橋嘅故事</td></tr>
+<tr><td>🚉 第5站</td><td><strong>🏘️ 礦村四區</strong></td><td>3分鐘</td><td>⏸️ 5分鐘</td><td>潮洲村/馬鞍橋</td></tr>
+<tr><td>🚉 終點</td><td><strong>🚢 耀安邨碼頭</strong></td><td>1分鐘</td><td>自由</td><td>睇「大寶山號」，完結</td></tr>
+</table>
+<p style="font-size:0.85rem;color:#94a3b8;margin-top:6px">全程約 25-30 分鐘 · 車速可自己控制快慢</p>
+</div>
+
+<div class="section">
+<h2>🎮 核心操作</h2>
+<table>
+<tr><th>操作</th><th>鍵盤</th><th>手機</th><th>效果</th></tr>
+<tr><td>加速/前進</td><td>W / ↑</td><td>右下油門</td><td>礦車向前行</td></tr>
+<tr><td>減速/煞車</td><td>S / ↓</td><td>右下煞車</td><td>礦車減速/停車</td></tr>
+<tr><td>左右望</td><td>滑鼠 / A/D</td><td>拖曳畫面</td><td>四圍睇風景</td></tr>
+<tr><td>落車</td><td>E</td><td>㩒落車掣</td><td>到站落車自由行</td></tr>
+<tr><td>上車</td><td>E</td><td>㩒上車掣</td><td>返去車廂繼續行程</td></tr>
+<tr><td>語音重播</td><td>R</td><td>㩒重播</td><td>再聽一次介紹</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>🌅 天光墟重現 — 重點設計</h2>
+<div class="columns">
+<div>
+<h3>場景</h3>
+<table>
+<tr><th>元素</th><th>UE5 實作</th></tr>
+<tr><td>時間</td><td>清晨6:00，藍色時刻</td></tr>
+<tr><td>燈光</td><td>Lumen 晨光 + 油燈</td></tr>
+<tr><td>霧氣</td><td>Height Fog 低層霧</td></tr>
+<tr><td>聲音</td><td>叫賣聲/雞啼/蒸氣</td></tr>
+<tr><td>溫度</td><td>色調偏冷，陽光漸暖</td></tr>
+</table>
+</div>
+<div>
+<h3>檔口</h3>
+<table>
+<tr><th>檔口</th><th>NPC動作</th></tr>
+<tr><td>🥬 菜檔</td><td>礦工妻子格價</td></tr>
+<tr><td>🐟 魚檔</td><td>魚佬擔魚由西貢返嚟</td></tr>
+<tr><td>🥩 豬肉檔</td><td>斬豬肉聲效</td></tr>
+<tr><td>🫓 燒餅佬</td><td>小朋友圍住買</td></tr>
+<tr><td>🍜 雲吞麵</td><td>蒸氣上升效果</td></tr>
+<tr><td>🍬 士多</td><td>小朋友買糖</td></tr>
+</table>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>🛠️ UE5 技術架構</h2>
+<table>
+<tr><th>系統</th><th>技術</th><th>用途</th></tr>
+<tr><td>路軌</td><td>👑 <strong>Spline Component</strong></td><td>定義礦車行駛路線，可視化編輯</td></tr>
+<tr><td>礦車</td><td>👑 <strong>Spline Follower + Physics</strong></td><td>沿 spline 移動，物理加減速</td></tr>
+<tr><td>地形</td><td>World Partition + Landscape</td><td>3km 馬鞍山地形</td></tr>
+<tr><td>建築</td><td>Nanite Static Mesh</td><td>高精度教堂/礦洞/村屋</td></tr>
+<tr><td>照明</td><td>Lumen GI + Sky Atmosphere</td><td>真實光照，晨昏變化</td></tr>
+<tr><td>語音</td><td>Media Player + Localized Audio</td><td>每站廣東話語音導賞</td></tr>
+<tr><td>碰撞</td><td>Chaos Physics</td><td>落車後自由行走物理</td></tr>
+<tr><td>UI</td><td>Common UI + UMG</td><td>手機/PC 觸控操作</td></tr>
+<tr><td>時序</td><td>Level Sequencer</td><td>天光墟檔口開門動畫</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📦 資產需求（可免費/平價獲取）</h2>
+<table>
+<tr><th>類別</th><th>需要</th><th>獲取方式</th></tr>
+<tr><td>地形</td><td>馬鞍山高度圖</td><td>政府開放數據 / UE5 Landscape auto</td></tr>
+<tr><td>建築</td><td>礦場建築模型</td><td>自己建模（Box 組合）</td></tr>
+<tr><td>樹木</td><td>嶺南植被</td><td>Quixel Megascans（免費）</td></tr>
+<tr><td>礦車</td><td>牽引機車+礦卡</td><td>自己建模</td></tr>
+<tr><td>人物</td><td>礦工/村民 NPC</td><td>MetaHuman（免費）+ 時代服裝</td></tr>
+<tr><td>道具</td><td>菜檔/魚檔/秤砣</td><td>Quixel + 自己建模</td></tr>
+<tr><td>聲音</td><td>導賞語音</td><td>🎤 <strong>Ming 自己錄</strong>（最好！）</td></tr>
+<tr><td>音樂</td><td>背景環境聲</td><td>UE5 免費音效包 + freesound</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>🚀 開發路線</h2>
+<div class="flow">
+<div class="flow-item"><strong>Phase 1：Spline 路軌 + 礦車</strong><br>整一條簡單路軌，礦車跟住行，可以加減速。<span class="arrow">→ 1-2日</span></div>
+<div class="flow-item"><strong>Phase 2：地形 + 基本場景</strong><br>Landscape 地形，放幾座山，還原馬鞍山輪廓。<span class="arrow">→ 2-3日</span></div>
+<div class="flow-item"><strong>Phase 3：車站建築</strong><br>240ML入口、恩光堂、村屋（Box模型先）。<span class="arrow">→ 3-4日</span></div>
+<div class="flow-item"><strong>Phase 4：天光墟</strong><br>檔口模型 + NPC + 環境聲 + 晨光照明。<span class="arrow">→ 2-3日</span></div>
+<div class="flow-item"><strong>Phase 5：語音導賞系統</strong><br>到站自動播介紹，Ming錄音最好！<span class="arrow">→ 1-2日</span></div>
+<div class="flow-item"><strong>Phase 6：UI + 手機控制</strong><br>觸控按鍵、選單、自動駕駛模式。<span class="arrow">→ 2-3日</span></div>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 語音導賞 — Ming 嘅專業知識係關鍵</h2>
+<div class="info-box">
+<strong>建議：由 Ming 親自錄音！</strong><br>
+你係鞍山探索館駐場導賞員，你嘅聲音 + 真實經歷係呢個 game 最大嘅資產！<br><br>
+✅ 每站 1-2 分鐘介紹<br>
+✅ 可以用手機錄音（WhatsApp send俾我就得）<br>
+✅ 唔使專業咪，UE5 可以加環境混音<br>
+✅ 可以講親身經歷/趣事<br>
+<br>
+<strong>你講嘅故事，比任何書本資料更珍貴。</strong>
+</div>
+</div>
+
+<div class="section">
+<h2>📋 Phase 1 具體步驟（聽日可以開工）</h2>
+<table>
+<tr><th>步驟</th><th>做咩</th><th>UE5 點做</th></tr>
+<tr><td>1</td><td>開新 project</td><td>Blank > Third Person > 手機/PC</td></tr>
+<tr><td>2</td><td>整一條 spline 路軌</td><td>BP_SplineTrack + Spline Component</td></tr>
+<tr><td>3</td><td>整礦車跟住行</td><td>BP_MineCart > Timeline > GetLocationAtSplinePoint</td></tr>
+<tr><td>4</td><td>加減速控制</td><td>鍵盤 W/S > AddCustomEvent > float Speed</td></tr>
+<tr><td>5</td><td>放 camera 喺礦車上</td><td>SpringArmComponent + CameraComponent</td></tr>
+<tr><td>6</td><td>整 Landscape 地形</td><td>Landscape Mode > 簡單山丘形狀</td></tr>
+<tr><td>7</td><td>測試行車</td><td>㩒 Play，W加速，S減速</td></tr>
+</table>
+</div>
+
+<div class="section" style="text-align:center;padding:15px">
+
+<h3 style="color:#fbbf24">🚋 總結：礦村觀光列車</h3>
+<div class="columns" style="margin-top:15px">
+<div class="info-box" style="border-left-color:#4ade80">
+<strong style="color:#4ade80">✅ 適合重溫礦山風采</strong><br>
+慢速行駛，沿途每站介紹<br>
+真正睇到礦場全貌
+</div>
+<div class="info-box" style="border-left-color:#fbbf24">
+<strong style="color:#fbbf24">✅ 適合重現天光墟</strong><br>
+停站落車，穿梭檔口<br>
+清晨光影+環境音效
+</div>
+</div>
+
+<p style="color:#475569;font-size:0.9rem;margin-top:15px">
+Ming，你要唔要我幫你起 Phase 1 嘅 Blueprint 步驟？定係你想自己試下先？🙏
+</p>
+</div>
+
+</div>
+</body>
+</html>
