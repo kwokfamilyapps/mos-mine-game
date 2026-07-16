@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>馬鞍山鐵礦 3D 探索 V1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;touch-action:none;font-family:"Segoe UI",sans-serif}
+canvas{display:block;width:100vw;height:100dvh}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#info{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 24px;color:#e2e8f0;font-size:14px;max-width:85vw;text-align:center;transition:opacity 0.5s}
+#info .title{color:#fbbf24;font-size:16px;font-weight:bold;margin-bottom:4px}
+#info .desc{color:#94a3b8;font-size:12px;line-height:1.5}
+#crosshair{position:fixed;top:50%;left:50%;width:4px;height:4px;background:rgba(255,255,255,0.5);border-radius:50%;transform:translate(-50%,-50%);z-index:12}
+#hud-top{position:fixed;top:15px;left:15px;z-index:15;pointer-events:none}
+#hud-top div{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);border-radius:8px;padding:6px 14px;color:#e2e8f0;font-size:12px;margin-bottom:4px;display:inline-block}
+#hud-top .gold{color:#fbbf24}
+#controls{position:fixed;bottom:15px;left:0;width:100%;display:flex;justify-content:space-between;padding:0 15px;z-index:20;pointer-events:none}
+.joystick-area{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);position:relative;pointer-events:auto}
+.joystick-knob{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+#title{position:fixed;top:0;left:0;width:100%;height:100%;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a0e1a 0%,#1a1a2e 100%)}
+#title h1{color:#fbbf24;font-size:26px;margin-bottom:5px}
+#title h2{color:#e2e8f0;font-size:36px;margin-bottom:10px;font-weight:300}
+#title .sub{color:#94a3b8;font-size:13px;margin-bottom:30px;text-align:center;line-height:1.6}
+#title .btn{padding:14px 50px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.08);color:#e2e8f0;font-size:16px;cursor:pointer;text-decoration:none;letter-spacing:1px;transition:all 0.3s}
+#title .btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.5)}
+</style>
+</head>
+<body>
+
+<div id="title">
+  <div style="color:#94a3b8;font-size:12px;margin-bottom:15px;letter-spacing:3px">1950-1976 香港馬鞍山鐵礦場</div>
+  <h2>3D 探索旅程</h2>
+  <div class="sub">240ML 礦洞 → 恩光堂 → 礦村四區 → 耀安邨<br>漫步見證香港最大鐵礦場歷史</div>
+  <a class="btn" id="startBtn">⛏️ 開始探索</a>
+  <div class="sub" style="margin-top:20px;font-size:11px;color:#475569">
+    WASD 移動 · 滑鼠環顧 · 行近地標自動顯示介紹
+  </div>
+</div>
+
+<div id="ui">
+  <div id="hud-top">
+    <div>📍 <span id="locationName">240ML 礦洞入口</span></div>
+  </div>
+  <div id="crosshair"></div>
+  <div id="info" style="opacity:0">
+    <div class="title" id="infoTitle"></div>
+    <div class="desc" id="infoDesc"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ===== SCENE =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8ba8c4);
+scene.fog = new THREE.FogExp2(0x8ba8c4, 0.006);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 300);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.prepend(renderer.domElement);
+
+// ===== LIGHTING =====
+const ambient = new THREE.AmbientLight(0x8899bb, 0.4);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xffeecc, 2.5);
+sun.position.set(30, 40, -20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 120;
+sun.shadow.camera.left = -50;
+sun.shadow.camera.right = 50;
+sun.shadow.camera.top = 50;
+sun.shadow.camera.bottom = -50;
+sun.shadow.bias = -0.001;
+scene.add(sun);
+
+const hemi = new THREE.HemisphereLight(0x87ceeb, 0x3a2a1a, 0.5);
+scene.add(hemi);
+
+// ===== TERRAIN =====
+const terrainSize = 160;
+const terrainSeg = 80;
+const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSeg, terrainSeg);
+const tPos = terrainGeo.attributes.position.array;
+for (let i = 0; i < tPos.length; i += 3) {
+  const x = tPos[i], y = tPos[i+1];
+  const dist = Math.sqrt(x*x + y*y);
+  // Mountain shape - higher at one end, sloping to sea
+  let h = 0;
+  h += Math.max(0, (20 - dist) / 20 * 12); // central peak
+  h += Math.sin(x*0.08)*Math.cos(y*0.07)*2;
+  h += Math.sin(x*0.15+y*0.12)*0.8;
+  h += Math.sin(x*0.04)*Math.cos(y*0.05)*1.5;
+  if (x > 15) h -= (x-15)*0.15; // slope to sea
+  if (y > 20) h -= (y-20)*0.1;
+  tPos[i+2] = h;
+}
+terrainGeo.computeVertexNormals();
+
+// Layer: grass texture approximation
+const colors = [];
+for (let i = 0; i < tPos.length; i += 3) {
+  const x = tPos[i], y = tPos[i+1], h = tPos[i+2];
+  let c;
+  if (h < 0.5) c = new THREE.Color(0x7a9a5a);
+  else if (h < 3) c = new THREE.Color(0x5a7a3a);
+  else if (h < 7) c = new THREE.Color(0x4a6a2a);
+  else c = new THREE.Color(0x3a5a1a);
+  colors.push(c.r, c.g, c.b);
+}
+terrainGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+const terrainMat = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.9,
+  metalness: 0.0,
+  side: THREE.DoubleSide,
+  flatShading: false
+});
+const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+terrain.rotation.x = -Math.PI/2;
+terrain.receiveShadow = true;
+terrain.castShadow = true;
+scene.add(terrain);
+
+// ===== TREES =====
+function createTree(x, z, scale) {
+  const h = terrainGeo.attributes.position.array;
+  // Sample terrain height
+  const u = (x/terrainSize + 0.5);
+  const v = (z/terrainSize + 0.5);
+  let terrainY = 0;
+  // Simplified height sampling
+  const idx = Math.floor((z+terrainSize/2)/terrainSize * terrainSeg) * (terrainSeg+1) + Math.floor((x+terrainSize/2)/terrainSize * terrainSeg);
+  if (idx*3+2 < h.length) terrainY = h[idx*3+2];
+  if (terrainY < 1 || terrainY > 9) return;
+
+  const group = new THREE.Group();
+  // Trunk
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08*scale, 0.12*scale, 0.6*scale, 5),
+    new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.9 })
+  );
+  trunk.position.y = 0.3*scale;
+  group.add(trunk);
+  // Foliage - multiple spheres for realistic look
+  const folColor = new THREE.Color().setHSL(0.25 + Math.random()*0.08, 0.4, 0.18 + Math.random()*0.1);
+  const folMat = new THREE.MeshStandardMaterial({ color: folColor, roughness: 0.8 });
+  for (let i = 0; i < 4; i++) {
+    const r = 0.3 + Math.random()*0.3;
+    const fol = new THREE.Mesh(new THREE.SphereGeometry(r*scale, 5, 5), folMat);
+    fol.position.set((Math.random()-0.5)*0.5*scale, 0.8*scale + Math.random()*0.4*scale, (Math.random()-0.5)*0.5*scale);
+    group.add(fol);
+  }
+  group.position.set(x, terrainY, z);
+  group.scale.set(1 + Math.random()*0.5, 1, 1 + Math.random()*0.5);
+  scene.add(group);
+}
+
+for (let i = 0; i < 120; i++) {
+  const x = (Math.random()-0.5)*100;
+  const z = (Math.random()-0.5)*100;
+  if (Math.sqrt(x*x+z*z) < 15) continue; // clear central area
+  createTree(x, z, 0.5 + Math.random()*0.8);
+}
+
+// ===== ROCKS =====
+const rockMat = new THREE.MeshStandardMaterial({ color: 0x6a5a4a, roughness: 0.8 });
+for (let i = 0; i < 30; i++) {
+  const x = (Math.random()-0.5)*60;
+  const z = (Math.random()-0.5)*60;
+  const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2+Math.random()*0.5, 0), rockMat);
+  r.position.set(x, 0.1, z);
+  r.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+  r.castShadow = true;
+  scene.add(r);
+}
+
+// ===== BUILDINGS =====
+function createBuilding(x, z, w, h, d, color, wallColor) {
+  const wallMat = new THREE.MeshStandardMaterial({ color: wallColor || 0xd4c4a0, roughness: 0.7 });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+  b.position.set(x, h/2, z);
+  b.castShadow = true;
+  b.receiveShadow = true;
+  scene.add(b);
+  // Roof (Chinese style)
+  const roofMat = new THREE.MeshStandardMaterial({ color: color || 0x884444, roughness: 0.6 });
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w+0.2, 0.15, d+0.4), roofMat);
+  roof.position.set(x, h+0.1, z);
+  scene.add(roof);
+  // Roof ridge
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, d+0.3), roofMat);
+  ridge.position.set(x, h+0.2, z);
+  scene.add(ridge);
+  // Windows
+  const winMat = new THREE.MeshStandardMaterial({ color: 0x88bbdd, emissive: 0x446688, emissiveIntensity: 0.1 });
+  if (w > 1.5) {
+    const win = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.05), winMat);
+    win.position.set(x-w/4, h*0.6, z+d/2+0.01);
+    scene.add(win);
+  }
+  return { mesh: b, width: w, height: h, depth: d };
+}
+
+// 1. 240ML Mine Entrance
+const mineMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a, roughness: 0.8 });
+const mineEntrance = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 2), mineMat);
+mineEntrance.position.set(-10, 2, 8);
+mineEntrance.castShadow = true;
+scene.add(mineEntrance);
+// Mine arch
+const archMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.7 });
+const arch = new THREE.Mesh(new THREE.BoxGeometry(6, 0.8, 0.5), archMat);
+arch.position.set(-10, 4, 9);
+scene.add(arch);
+// Mine tunnel (dark opening)
+const tunnelMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1, side: THREE.DoubleSide });
+const tunnel = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 3), tunnelMat);
+tunnel.position.set(-10, 2, 9.5);
+scene.add(tunnel);
+// Sign "240ML"
+const signMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+const sign = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 0.05), signMat);
+sign.position.set(-10, 4.3, 9.5);
+scene.add(sign);
+
+// 2. Grace Church (恩光堂)
+function createChurch(baseX, baseZ) {
+  // Main building
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0f0e8, roughness: 0.6 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x3a6a3a, roughness: 0.7 });
+  
+  const main = new THREE.Mesh(new THREE.BoxGeometry(5, 3.5, 7), wallMat);
+  main.position.set(baseX, 1.75, baseZ);
+  main.castShadow = true; main.receiveShadow = true;
+  scene.add(main);
+  
+  // Roof (gable)
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.3, 7.2), roofMat);
+  roof.position.set(baseX, 3.65, baseZ);
+  scene.add(roof);
+  
+  // Moss on roof
+  const mossMat = new THREE.MeshStandardMaterial({ color: 0x4a7a4a, roughness: 1 });
+  for (let i = 0; i < 8; i++) {
+    const moss = new THREE.Mesh(new THREE.SphereGeometry(0.15 + Math.random()*0.2, 4, 4), mossMat);
+    moss.position.set(baseX + (Math.random()-0.5)*4, 3.8, baseZ + (Math.random()-0.5)*6);
+    scene.add(moss);
+  }
+  
+  // Bell tower
+  const towerMat = new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.5 });
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(1.5, 5, 1.5), towerMat);
+  tower.position.set(baseX+2.5, 2.5, baseZ-1.5);
+  tower.castShadow = true;
+  scene.add(tower);
+  
+  // Spire
+  const spireMat = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.4 });
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.5, 4), spireMat);
+  spire.position.set(baseX+2.5, 5.75, baseZ-1.5);
+  scene.add(spire);
+  
+  // Red cross on spire
+  const crossMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3 });
+  const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), crossMat);
+  crossV.position.set(baseX+2.5, 6.2, baseZ-1.5+0.3);
+  scene.add(crossV);
+  const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.08), crossMat);
+  crossH.position.set(baseX+2.5, 6.2, baseZ-1.5+0.3);
+  scene.add(crossH);
+  
+  // Windows (stained glass effect)
+  const winMat = new THREE.MeshStandardMaterial({ color: 0x6688aa, emissive: 0x446688, emissiveIntensity: 0.2 });
+  const win = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.05), winMat);
+  win.position.set(baseX+1.5, 1.8, baseZ+3.51);
+  scene.add(win);
+  const win2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.05), winMat);
+  win2.position.set(baseX-1.5, 1.8, baseZ+3.51);
+  scene.add(win2);
+  
+  // Door
+  const doorMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.05), doorMat);
+  door.position.set(baseX, 0.6, baseZ+3.51);
+  scene.add(door);
+}
+createChurch(8, 5);
+
+// 3. St. Joseph's Church (simpler)
+const sjMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.6 });
+const sj = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.5, 5), sjMat);
+sj.position.set(-3, 1.25, -2);
+sj.castShadow = true;
+scene.add(sj);
+const sjRoof = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.2, 5.2), new THREE.MeshStandardMaterial({ color: 0x884444 }));
+sjRoof.position.set(-3, 2.6, -2);
+scene.add(sjRoof);
+const sjCross = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+sjCross.position.set(-3, 3.1, -2+2.6);
+scene.add(sjCross);
+
+// 4. Village houses along the path
+const houseData = [
+  [0, -5, 2, 1.5, 2.5, 0xd4a373, 0xcc6644],
+  [3, -7, 2.5, 1.8, 3, 0xc49a6c, 0xbb5533],
+  [-4, -9, 2, 1.6, 2, 0xddd4b0, 0xcc6644],
+  [5, -10, 2.2, 1.7, 2.5, 0xd4c4a0, 0xbb5533],
+  [-3, -12, 2.5, 1.8, 3, 0xc4b490, 0xcc6644],
+  [4, -13, 2, 1.5, 2, 0xddd4b0, 0xbb5533],
+  [-5, -15, 2.3, 1.7, 2.5, 0xd4a373, 0xcc6644],
+  [6, -16, 2.5, 2, 3, 0xc49a6c, 0xbb5533],
+  [-2, -18, 2, 1.5, 2, 0xddd4b0, 0xcc6644],
+  [5, -19, 2.2, 1.6, 2.5, 0xd4c4a0, 0xbb5533],
+];
+for (const [x, z, w, h, d, wall, roof] of houseData) {
+  createBuilding(x, z, w, h, d, roof, wall);
+}
+
+// 5. Peace Bridge (small stone bridge)
+const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x7a7a6a, roughness: 0.8 });
+const bridge = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 2), bridgeMat);
+bridge.position.set(0, 0.25, -22);
+bridge.castShadow = true;
+scene.add(bridge);
+// Bridge rails
+const railMat2 = new THREE.MeshStandardMaterial({ color: 0x6a6a5a });
+for (let side of [-1, 1]) {
+  const r = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 2), railMat2);
+  r.position.set(side*0.7, 0.5, -22);
+  scene.add(r);
+}
+
+// 6. 天光墟 path (market path outside Grace Church)
+const pathMat = new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.9 });
+const path = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 6), pathMat);
+path.position.set(8, 0.05, 9.5);
+scene.add(path);
+
+// 7. Sea / water (at the bottom)
+const waterMat = new THREE.MeshStandardMaterial({
+  color: 0x3a6a8a,
+  roughness: 0.2,
+  metalness: 0.8,
+  transparent: true,
+  opacity: 0.7
+});
+const water = new THREE.Mesh(new THREE.PlaneGeometry(100, 30), waterMat);
+water.rotation.x = -Math.PI/2;
+water.position.set(30, -0.5, -30);
+scene.add(water);
+
+// ===== LANDMARKS (info points) =====
+const landmarks = [
+  { pos: [-10, 2, 8], name: '240ML 礦洞入口', desc: '海拔240米嘅主礦洞入口，1960年代係馬鞍山鐵礦場嘅主要開採點。礦工喺度翻名牌出入，紅色代表入礦，綠色代表出礦。', range: 4 },
+  { pos: [8, 1.75, 5], name: '信義會恩光堂', desc: '建於1950年代嘅礦村教堂，白色牆身配青苔屋頂，小鐘樓上嘅紅色十字架係礦村地標。當年係礦工同家屬嘅心靈支柱。', range: 4 },
+  { pos: [-3, 1.25, -2], name: '天主堂聖若瑟堂', desc: '礦村另一間教堂，服務礦區嘅天主教徒。與恩光堂並立，見證當年教會喺礦村嘅重要角色。', range: 3.5 },
+  { pos: [8, 0.05, 9.5], name: '天光墟', desc: '恩光堂門外嘅清晨市集，清晨6點到7點營業。礦工妻子喺度買餸、小朋友買糖、修女傳教。', range: 3 },
+  { pos: [0, 0.25, -22], name: '和平橋', desc: '連接礦村各區嘅小石橋，礦工放工後必經之路。', range: 3 },
+  { pos: [15, -0.5, -15], name: '耀安邨（碼頭舊址）', desc: '今日嘅耀安邨一帶，昔日係礦石碼頭。鐵礦石經運輸帶由選礦廠送到碼頭，裝上「大寶山號」貨輪運往日本。', range: 5 },
+];
+
+// Info UI
+const infoEl = document.getElementById('info');
+const infoTitle = document.getElementById('infoTitle');
+const infoDesc = document.getElementById('infoDesc');
+const locName = document.getElementById('locationName');
+
+// ===== PLAYER =====
+let playerPos = new THREE.Vector3(-10, 0, 6);
+let playerYaw = 0;
+let playerPitch = -0.1;
+const moveSpeed = 3.0;
+let isLocked = false;
+
+// ===== INPUT =====
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key.toLowerCase()]=true; e.preventDefault(); });
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()]=false; });
+
+// Pointer lock for mouse look
+renderer.domElement.addEventListener('click', () => {
+  if (!isLocked && running) renderer.domElement.requestPointerLock();
+});
+document.addEventListener('pointerlockchange', () => {
+  isLocked = document.pointerLockElement === renderer.domElement;
+});
+document.addEventListener('mousemove', e => {
+  if (!isLocked) return;
+  playerYaw -= e.movementX * 0.002;
+  playerPitch -= e.movementY * 0.002;
+  playerPitch = Math.max(-0.8, Math.min(0.8, playerPitch));
+});
+
+// Touch controls
+let touchActive = false;
+let touchStartX = 0, touchStartY = 0;
+let touchLookX = 0, touchLookY = 0;
+renderer.domElement.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    touchActive = true;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+});
+renderer.domElement.addEventListener('touchmove', e => {
+  if (e.touches.length === 1) {
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 5) playerYaw -= dx * 0.005;
+    if (Math.abs(dy) > 5) playerPitch -= dy * 0.005;
+    playerPitch = Math.max(-0.8, Math.min(0.8, playerPitch));
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+});
+renderer.domElement.addEventListener('touchend', () => { touchActive = false; });
+
+// ===== GAME STATE =====
+let running = false;
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('touchend', e => { e.preventDefault(); startGame(); });
+
+function startGame() {
+  document.getElementById('title').style.display = 'none';
+  playerPos.set(-10, 0, 6);
+  playerYaw = 0.5;
+  playerPitch = -0.1;
+  running = true;
+  renderer.domElement.requestPointerLock();
+}
+
+// ===== UPDATE =====
+function update(dt) {
+  if (!running) return;
+
+  // Movement
+  const forward = new THREE.Vector3(-Math.sin(playerYaw), 0, -Math.cos(playerYaw));
+  const right = new THREE.Vector3(forward.z, 0, -forward.x);
+  let move = new THREE.Vector3();
+
+  if (keys['w'] || keys['arrowup']) move.add(forward);
+  if (keys['s'] || keys['arrowdown']) move.add(forward.clone().negate());
+  if (keys['a'] || keys['arrowleft']) move.add(right.clone().negate());
+  if (keys['d'] || keys['arrowright']) move.add(right);
+
+  if (move.length() > 0) {
+    move.normalize().multiplyScalar(moveSpeed * dt);
+    playerPos.add(move);
+  }
+
+  // Clamp to terrain
+  playerPos.y = 0; // Will be adjusted by terrain
+
+  // Camera
+  camera.position.copy(playerPos);
+  camera.position.y += 1.6; // eye height
+
+  const lookTarget = new THREE.Vector3(
+    playerPos.x + Math.sin(playerYaw) * Math.cos(playerPitch),
+    playerPos.y + 1.6 + Math.sin(playerPitch),
+    playerPos.z + Math.cos(playerYaw) * Math.cos(playerPitch)
+  );
+  camera.lookAt(lookTarget);
+
+  // Check landmarks
+  let closest = null;
+  let closestDist = Infinity;
+  for (const l of landmarks) {
+    const dx = playerPos.x - l.pos[0];
+    const dz = playerPos.z - l.pos[2];
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist < l.range && dist < closestDist) {
+      closest = l;
+      closestDist = dist;
+    }
+  }
+
+  if (closest) {
+    infoEl.style.opacity = '1';
+    infoTitle.textContent = closest.name;
+    infoDesc.textContent = closest.desc;
+    locName.textContent = closest.name;
+  } else {
+    infoEl.style.opacity = '0';
+    locName.textContent = '馬鞍山礦村';
+  }
+}
+
+// ===== RESIZE =====
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===== LOOP =====
+let lastTime = 0;
+function animate(time) {
+  const dt = Math.min((time-lastTime)/1000, 0.05);
+  lastTime = time;
+  update(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+animate(0);
+</script>
+</body>
+</html>
